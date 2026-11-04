@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793699175266,
+      "tag": "0000_admin_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793806983136,
+      "tag": "0001_dish_visibility_and_photos",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793807582873,
+      "tag": "0002_diet_flags_sommelier",
+      "breakpoints": true
+    }
+  ]
+}
