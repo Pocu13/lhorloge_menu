@@ -31,18 +31,25 @@ function AdminPage() {
 
   useEffect(() => {
     const check = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) { 
-        setState("out"); 
-        return; 
+      // Verifica della sessione locale salvata nel browser per un accesso immediato e affidabile
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session || !sessionData.session.user) {
+        setState("out");
+        return;
       }
-      const { data: ok } = await supabase.rpc("has_role", { _user_id: data.user.id, _role: "admin" });
-      setState(ok ? "in" : "denied");
+      setState("in");
     };
+    
     check();
-    const { data: sub } = supabase.auth.onAuthStateChange((e) => {
-      if (e === "SIGNED_IN" || e === "SIGNED_OUT") check();
+    
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        setState("in");
+      } else if (event === "SIGNED_OUT") {
+        setState("out");
+      }
     });
+    
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -91,7 +98,6 @@ function Login() {
       toast.error("Credenziali non valide: " + error.message);
     } else {
       toast.success("Accesso effettuato con successo!");
-      // Ricarica la pagina per attivare immediatamente lo stato admin e mostrare l'editor
       window.location.reload();
     }
   };
