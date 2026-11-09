@@ -75,7 +75,6 @@ export function formatPrice(eur: number, lang: Lang) {
 const d = (x: Dish) => x;
 
 export const dishes: Dish[] = [
-  // Antipasti
   d({
     id: "tagliere", category: "antipasti", price: 18, image: tagliere.url,
     name: { it: "Tagliere L'Horloge", en: "L'Horloge Board" },
@@ -154,7 +153,6 @@ export const dishes: Dish[] = [
       en: ["Datterino tomato", "Pachino costoluto", "Fleur de sel", "Etna oregano"],
     },
   }),
-  // Primi
   d({
     id: "norma", category: "primi", price: 14, image: norma.url,
     name: { it: "Norma a modo mio", en: "My Own Norma" },
@@ -249,7 +247,6 @@ export const dishes: Dish[] = [
       en: ["Egg pasta", "IGP burrata", "Bronte pistachio", "Verdello lemon"],
     },
   }),
-  // Secondi
   d({
     id: "burger", category: "secondi", price: 17, image: burger.url,
     name: { it: "Burger Pistacchioso", en: "Pistachio Burger" },
@@ -289,7 +286,6 @@ export const dishes: Dish[] = [
       en: ["Swordfish", "Cherry tomatoes", "Capers", "Olives", "Raisins"],
     },
   }),
-  // Dolci
   d({
     id: "tiramisu", category: "dolci", price: 7.5, image: tiramisu.url,
     name: { it: "Tiramisù al Cucchiaio Mandorlato Etneo", en: "Etna Almond Spoon Tiramisù" },
@@ -316,7 +312,6 @@ export const dishes: Dish[] = [
       en: ["Sheep's ricotta", "Shell", "Candied orange", "Pistachio"],
     },
   }),
-  // Bevande
   d({
     id: "etna-rosso", category: "bevande", price: 32,
     name: { it: "Etna Rosso DOC Contrada", en: "Etna Rosso DOC Contrada" },
@@ -356,7 +351,6 @@ export const dishes: Dish[] = [
   }),
 ];
 
-// Allergeni (Reg. UE 1169/2011)
 export type AllergenId =
   | "glutine" | "latte" | "uova" | "fruttaGuscio" | "pesce" | "crostacei"
   | "sedano" | "solfiti" | "soia" | "senape"
@@ -380,15 +374,16 @@ export const allergenLabels: Record<AllergenId, T> = {
 };
 
 export type DietId = "vegetarian" | "vegan" | "gluten_free";
-export const dietLabels: Record<DietId, T> = {
-  vegetarian: { it: "Vegetariano", en: "Vegetarian" },
-  vegan: { it: "Vegano", en: "Vegan" },
-  gluten_free: { it: "Senza glutine", en: "Gluten free" },
+
+export const dietLabels: Record<DietId, T & { short: string }> = {
+  vegetarian: { it: "Vegetariano", en: "Vegetarian", short: "V" },
+  vegan: { it: "Vegano", en: "Vegan", short: "VG" },
+  gluten_free: { it: "Senza glutine", en: "Gluten free", short: "GF" },
 };
 
-// Aggiunto per soddisfare le importazioni nei componenti delle rotte
 export const dietUi = {
   title: { it: "Preferenze alimentari", en: "Dietary preferences" },
+  count: { it: (n: number) => `${n} piatti`, en: (n: number) => `${n} dishes` },
   empty: { it: "Nessun piatto corrisponde ai filtri scelti.", en: "No dishes match the selected filters." },
   sommelier: { it: "Consiglio del Sommelier", en: "Sommelier's Pairing" },
 };
