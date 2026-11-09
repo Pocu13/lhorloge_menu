@@ -47,37 +47,65 @@ is_vegetarian/is_vegan/is_gluten_free: true solo se chiaramente compatibile.`;
 
 export const extractMenu = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { fileName: string; mimeType: string; base64: string }) => {
+  .validator((d: { fileName: string; mimeType: string; base64: string }) => {
     if (!d?.base64 || d.base64.length > 20_000_000) throw new Error("File mancante o troppo grande (max ~15MB)");
     return d;
   })
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Non autorizzato");
-    const { generateResponse, GatewayError } = await import("@lovable.dev/ai-gateway");
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error("Chiave API OpenAI non configurata sul server.");
+    }
+
     const dataUrl = `data:${data.mimeType};base64,${data.base64}`;
     const isImage = data.mimeType.startsWith("image/");
+
     try {
-      const res = await generateResponse({
-        model: "openai/gpt-6-astra",
-        input: [{
-          role: "user",
-          content: [
-            { type: "input_text", text: PROMPT },
-            isImage
-              ? { type: "input_image", image_url: dataUrl, detail: "high" }
-              : { type: "input_file", filename: data.fileName || "menu.pdf", file_data: dataUrl },
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: PROMPT },
+                isImage
+                  ? { type: "image_url", image_url: { url: dataUrl } }
+                  : { type: "text", text: `[File allegato: ${data.fileName || "menu.pdf"}]\n${dataUrl}` },
+              ],
+            },
           ],
-        }],
-        text: { format: { type: "json_schema", name: "menu", strict: true, schema } },
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "menu",
+              strict: true,
+              schema,
+            },
+          },
+        }),
       });
-      const r = res as unknown as { output_text?: string; output?: { type: string; content?: { type: string; text?: string }[] }[] };
-      const text = r.output_text ?? r.output?.flatMap((o) => o.content ?? []).filter((c) => c.type === "output_text").map((c) => c.text ?? "").join("") ?? "";
+
+      if (!response.ok) {
+        throw new Error(`Errore API OpenAI: ${response.statusText}`);
+      }
+
+      const json = await response.json();
+      const text = json.choices?.[0]?.message?.content || "{}";
       const parsed = JSON.parse(text) as { dishes: ImportedDish[] };
+
       return { dishes: parsed.dishes, error: null as string | null };
     } catch (e) {
       console.error("extractMenu failed", e);
-      const msg = e instanceof GatewayError && e.httpStatus === 402 ? "Crediti AI esauriti" : "Impossibile leggere il menu. Riprova con un file più nitido.";
+      const msg = e instanceof Error ? e.message : "Impossibile leggere il menu. Riprova con un file più nitido.";
       return { dishes: [] as ImportedDish[], error: msg };
     }
   });
