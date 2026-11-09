@@ -60,6 +60,7 @@ export const ui = {
   hours: { it: "Aperti tutte le sere · 19:00 — 00:00", en: "Open every evening · 7 pm — midnight" },
 } satisfies Record<string, T>;
 
+/** EUR → USD indicative rate for the English interface. */
 export const USD_RATE = 1.08;
 
 export function formatPrice(eur: number, lang: Lang) {
@@ -74,6 +75,7 @@ export function formatPrice(eur: number, lang: Lang) {
 const d = (x: Dish) => x;
 
 export const dishes: Dish[] = [
+  // Antipasti
   d({
     id: "tagliere", category: "antipasti", price: 18, image: tagliere.url,
     name: { it: "Tagliere L'Horloge", en: "L'Horloge Board" },
@@ -152,6 +154,7 @@ export const dishes: Dish[] = [
       en: ["Datterino tomato", "Pachino costoluto", "Fleur de sel", "Etna oregano"],
     },
   }),
+  // Primi
   d({
     id: "norma", category: "primi", price: 14, image: norma.url,
     name: { it: "Norma a modo mio", en: "My Own Norma" },
@@ -246,6 +249,7 @@ export const dishes: Dish[] = [
       en: ["Egg pasta", "IGP burrata", "Bronte pistachio", "Verdello lemon"],
     },
   }),
+  // Secondi
   d({
     id: "burger", category: "secondi", price: 17, image: burger.url,
     name: { it: "Burger Pistacchioso", en: "Pistachio Burger" },
@@ -285,6 +289,7 @@ export const dishes: Dish[] = [
       en: ["Swordfish", "Cherry tomatoes", "Capers", "Olives", "Raisins"],
     },
   }),
+  // Dolci
   d({
     id: "tiramisu", category: "dolci", price: 7.5, image: tiramisu.url,
     name: { it: "Tiramisù al Cucchiaio Mandorlato Etneo", en: "Etna Almond Spoon Tiramisù" },
@@ -311,6 +316,7 @@ export const dishes: Dish[] = [
       en: ["Sheep's ricotta", "Shell", "Candied orange", "Pistachio"],
     },
   }),
+  // Bevande
   d({
     id: "etna-rosso", category: "bevande", price: 32,
     name: { it: "Etna Rosso DOC Contrada", en: "Etna Rosso DOC Contrada" },
@@ -350,26 +356,34 @@ export const dishes: Dish[] = [
   }),
 ];
 
+// Allergeni (Reg. UE 1169/2011)
 export type AllergenId =
   | "glutine" | "latte" | "uova" | "fruttaGuscio" | "pesce" | "crostacei"
   | "sedano" | "solfiti" | "soia" | "senape"
   | "arachidi" | "sesamo" | "lupini" | "molluschi";
 
 export const allergenLabels: Record<AllergenId, T> = {
-  glutine: { it: "Glutine", en: "Gluten" },
-  latte: { it: "Latte", en: "Milk" },
-  uova: { it: "Uova", en: "Eggs" },
-  fruttaGuscio: { it: "Frutta a guscio", en: "Tree nuts" },
-  pesce: { it: "Pesce", en: "Fish" },
+  glutine: { it: "Cereali con glutine", en: "Cereals containing gluten" },
   crostacei: { it: "Crostacei", en: "Crustaceans" },
-  sedano: { it: "Sedano", en: "Celery" },
-  solfiti: { it: "Solfiti", en: "Sulphites" },
-  soia: { it: "Soia", en: "Soy" },
-  senape: { it: "Senape", en: "Mustard" },
+  uova: { it: "Uova", en: "Eggs" },
+  pesce: { it: "Pesce", en: "Fish" },
   arachidi: { it: "Arachidi", en: "Peanuts" },
-  sesamo: { it: "Sesamo", en: "Sesame" },
+  soia: { it: "Soia", en: "Soy" },
+  latte: { it: "Latte e lattosio", en: "Milk and lactose" },
+  fruttaGuscio: { it: "Frutta a guscio", en: "Tree nuts" },
+  sedano: { it: "Sedano", en: "Celery" },
+  senape: { it: "Senape", en: "Mustard" },
+  sesamo: { it: "Semi di sesamo", en: "Sesame seeds" },
+  solfiti: { it: "Anidride solforosa e solfiti", en: "Sulphur dioxide and sulphites" },
   lupini: { it: "Lupini", en: "Lupin" },
   molluschi: { it: "Molluschi", en: "Molluscs" },
+};
+
+export type DietId = "vegetarian" | "vegan" | "gluten_free";
+export const dietLabels: Record<DietId, T> = {
+  vegetarian: { it: "Vegetariano", en: "Vegetarian" },
+  vegan: { it: "Vegano", en: "Vegan" },
+  gluten_free: { it: "Senza glutine", en: "Gluten free" },
 };
 
 export const dishAllergens: Record<string, AllergenId[]> = {
@@ -405,17 +419,3 @@ export const allergenUi = {
     en: "Indicative information: always check with our staff.",
   },
 } satisfies Record<string, T>;
-
-export type DietId = "is_vegetarian" | "is_vegan" | "is_gluten_free";
-export const dietLabels: Record<DietId, T & { short: string }> = {
-  is_vegetarian: { it: "Vegetariano", en: "Vegetarian", short: "V" },
-  is_vegan: { it: "Vegano", en: "Vegan", short: "VG" },
-  is_gluten_free: { it: "Senza Glutine", en: "Gluten Free", short: "GF" },
-};
-
-export const dietUi = {
-  title: { it: "Preferenze alimentari", en: "Dietary preferences" },
-  count: { it: (n: number) => `${n} piatti`, en: (n: number) => `${n} dishes` },
-  empty: { it: "Nessun piatto corrisponde ai filtri scelti.", en: "No dishes match the selected filters." },
-  sommelier: { it: "Consiglio del Sommelier", en: "Sommelier's Pairing" },
-};
