@@ -292,7 +292,11 @@ function DishForm({ initial, isNew, onDone }: { initial: DishRow; isNew: boolean
       return; 
     }
     setBusy(true);
-    const { updated_at: _u, ...payload } = { ...r, id: isNew ? slug(r.name_it) || crypto.randomUUID() : r.id };
+    const { updated_at: _u, ...payload } = { 
+      ...r, 
+      id: isNew ? slug(r.name_it) || crypto.randomUUID() : r.id,
+      image: r.image 
+    };
     const { error } = isNew
       ? await supabase.from("dishes").insert(payload)
       : await supabase.from("dishes").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", r.id);
