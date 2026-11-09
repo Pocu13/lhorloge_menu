@@ -361,13 +361,13 @@ export const allergenLabels: Record<AllergenId, T> = {
   uova: { it: "Uova", en: "Eggs" },
   fruttaGuscio: { it: "Frutta a guscio", en: "Tree nuts" },
   pesce: { it: "Pesce", en: "Fish" },
-  crostacei: { it: "Crostacei", en: "Crustaceans" },
-  sedano: { it: "Sedano", en: "Celery" },
-  solfiti: { it: "Solfiti", en: "Sulphites" },
-  soia: { it: "Soia", en: "Soy" },
-  senape: { it: "Senape", en: "Mustard" },
   arachidi: { it: "Arachidi", en: "Peanuts" },
+  soia: { it: "Soia", en: "Soy" },
+  latte: { it: "Latte", en: "Milk" },
+  sedano: { it: "Sedano", en: "Celery" },
+  senape: { it: "Senape", en: "Mustard" },
   sesamo: { it: "Sesamo", en: "Sesame" },
+  solfiti: { it: "Solfiti", en: "Sulphites" },
   lupini: { it: "Lupini", en: "Lupin" },
   molluschi: { it: "Molluschi", en: "Molluscs" },
 };
@@ -406,11 +406,12 @@ export const allergenUi = {
   },
 } satisfies Record<string, T>;
 
-export type DietId = "is_vegetarian" | "is_vegan" | "is_gluten_free";
+export type DietId = "vegetarian" | "vegan" | "gluten_free";
+
 export const dietLabels: Record<DietId, T & { short: string }> = {
-  is_vegetarian: { it: "Vegetariano", en: "Vegetarian", short: "V" },
-  is_vegan: { it: "Vegano", en: "Vegan", short: "VG" },
-  is_gluten_free: { it: "Senza Glutine", en: "Gluten Free", short: "GF" },
+  vegetarian: { it: "Vegetariano", en: "Vegetarian", short: "V" },
+  vegan: { it: "Vegano", en: "Vegan", short: "VG" },
+  gluten_free: { it: "Senza glutine", en: "Gluten free", short: "GF" },
 };
 
 export const dietUi = {
