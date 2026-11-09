@@ -24,6 +24,14 @@ const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === "serverFn",
 });
 
+const attachAuth = createMiddleware({ type: "function" }).client(async ({ next }) => {
+  const { supabase } = await import("./integrations/supabase/client");
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  return next(token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+});
+
 export const startInstance = createStart(() => ({
   requestMiddleware: [errorMiddleware, csrfMiddleware],
+  functionMiddleware: [attachAuth],
 }));
