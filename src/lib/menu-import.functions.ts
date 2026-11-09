@@ -8,7 +8,7 @@ export type ImportedDish = {
   ingredients_it: string[]; ingredients_en: string[];
   price: number;
   allergens: string[];
-  vegetarian: boolean; vegan: boolean; gluten_free: boolean;
+  is_vegetarian: boolean; is_vegan: boolean; is_gluten_free: boolean;
 };
 
 const ALLERGENS = ["glutine", "latte", "uova", "fruttaGuscio", "pesce", "crostacei", "sedano", "solfiti", "soia", "senape", "arachidi", "sesamo", "lupini", "molluschi"];
@@ -26,14 +26,14 @@ const schema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["category", "name_it", "name_en", "description_it", "description_en", "ingredients_it", "ingredients_en", "price", "allergens", "vegetarian", "vegan", "gluten_free"],
+        required: ["category", "name_it", "name_en", "description_it", "description_en", "ingredients_it", "ingredients_en", "price", "allergens", "is_vegetarian", "is_vegan", "is_gluten_free"],
         properties: {
           category: { type: "string", enum: CATEGORIES },
           name_it: str, name_en: str, description_it: str, description_en: str,
           ingredients_it: strArr, ingredients_en: strArr,
           price: { type: "number" },
           allergens: { type: "array", items: { type: "string", enum: ALLERGENS } },
-          vegetarian: { type: "boolean" }, vegan: { type: "boolean" }, gluten_free: { type: "boolean" },
+          is_vegetarian: { type: "boolean" }, is_vegan: { type: "boolean" }, is_gluten_free: { type: "boolean" },
         },
       },
     },
@@ -43,7 +43,7 @@ const schema = {
 const PROMPT = `Sei un assistente che legge menu di ristoranti italiani. Estrai TUTTI i piatti e le bevande dal documento allegato.
 Per ogni voce: categoria (antipasti, primi, secondi, dessert, bevande), nome e descrizione in italiano e inglese (traduci se manca una lingua; descrizione vuota se assente), ingredienti come lista breve in IT ed EN (deducili da nome/descrizione), prezzo in euro come numero (0 se assente).
 Allergeni (Reg. UE 1169/2011) usando solo questi codici: ${ALLERGENS.join(", ")}. Usa quelli dichiarati nel menu; altrimenti deducili dagli ingredienti in modo prudente.
-vegetarian/vegan/gluten_free: true solo se chiaramente compatibile.`;
+is_vegetarian/is_vegan/is_gluten_free: true solo se chiaramente compatibile.`;
 
 export const extractMenu = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
