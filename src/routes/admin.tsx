@@ -386,7 +386,7 @@ function DishForm({ initial, isNew, onDone }: { initial: DishRow; isNew: boolean
         </div>
         <label className={cn("flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border/60 px-5 text-sm text-title", uploading && "opacity-60")}>
           <Camera className="h-4 w-4" /> {uploading ? "Caricamento…" : "Carica foto"}
-          <input type="file" accept="image/*" className="sr-only" disabled={uploading} onChange={(e) => { const f = e.target.files? onDelete?(e.target.files[0]):null; if (f) upload(f); e.target.value = ""; }} />
+          <input type="file" accept="image/*" className="sr-only" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
         </label>
         {r.image && <button type="button" onClick={() => set("image", null)} className="text-xs text-destructive">Rimuovi foto</button>}
       </div>
