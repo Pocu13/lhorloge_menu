@@ -27,6 +27,11 @@ export type Dish = {
   signature?: { note: T; pairing: T } | undefined;
 };
 
+const getImgUrl = (asset: any): string | undefined => {
+  if (!asset) return undefined;
+  return typeof asset === "string" ? asset : asset.url || asset.default?.url;
+};
+
 export const categories: { id: CategoryId; label: T }[] = [
   { id: "antipasti", label: { it: "Antipasti & Tapas", en: "Starters & Tapas" } },
   { id: "primi", label: { it: "Primi & Pizze", en: "Pasta & Pizza" } },
@@ -75,7 +80,7 @@ const d = (x: Dish) => x;
 
 export const dishes: Dish[] = [
   d({
-    id: "tagliere", category: "antipasti", price: 18, image: tagliere.url,
+    id: "tagliere", category: "antipasti", price: 18, image: getImgUrl(tagliere),
     name: { it: "Tagliere L'Horloge", en: "L'Horloge Board" },
     tag: { it: "Da condividere", en: "To share" },
     description: {
@@ -88,7 +93,7 @@ export const dishes: Dish[] = [
     },
   }),
   d({
-    id: "parmigiana", category: "antipasti", price: 11, image: parmigiana.url,
+    id: "parmigiana", category: "antipasti", price: 11, image: getImgUrl(parmigiana),
     name: { it: "Parmigiana d'Estate", en: "Summer Parmigiana" },
     tag: { it: "Vegetariano", en: "Vegetarian" },
     description: {
@@ -153,7 +158,7 @@ export const dishes: Dish[] = [
     },
   }),
   d({
-    id: "norma", category: "primi", price: 14, image: norma.url,
+    id: "norma", category: "primi", price: 14, image: getImgUrl(norma),
     name: { it: "Norma a modo mio", en: "My Own Norma" },
     tag: { it: "Signature Dish", en: "Signature Dish" },
     description: {
@@ -167,7 +172,7 @@ export const dishes: Dish[] = [
     signature: { note: { it: "Bassa Temperatura", en: "Slow Cooked" }, pairing: { it: "Etna Rosso DOC Contrada", en: "Etna Rosso DOC Contrada" } },
   }),
   d({
-    id: "pizza", category: "primi", price: 15.5, image: pizza.url,
+    id: "pizza", category: "primi", price: 15.5, image: getImgUrl(pizza),
     name: { it: "Pizza L'Horloge Contemporanea", en: "L'Horloge Contemporary Pizza" },
     tag: { it: "48h Lievitazione", en: "48h Leavening" },
     description: {
@@ -181,7 +186,7 @@ export const dishes: Dish[] = [
     signature: { note: { it: "48h Lievitazione", en: "48h Leavening" }, pairing: { it: "Spumante Metodo Classico Etneo", en: "Etna Classic Method Sparkling" } },
   }),
   d({
-    id: "gnocchetti", category: "primi", price: 13.5, image: gnocchetti.url,
+    id: "gnocchetti", category: "primi", price: 13.5, image: getImgUrl(gnocchetti),
     name: { it: "Gnocchetti Profumo d'Estate", en: "Summer Scent Gnocchetti" },
     tag: { it: "Fatto a Mano", en: "Handmade" },
     description: {
@@ -195,7 +200,7 @@ export const dishes: Dish[] = [
     signature: { note: { it: "14 min Espressi", en: "14 min, made to order" }, pairing: { it: "Etna Bianco Superiore", en: "Etna Bianco Superiore" } },
   }),
   d({
-    id: "spaghettone", category: "primi", price: 12.5, image: spaghettone.url,
+    id: "spaghettone", category: "primi", price: 12.5, image: getImgUrl(spaghettone),
     name: { it: "Spaghettone ai Tre Pomodori dell'Etna & Ricotta Affumicata", en: "Spaghettone with Three Etna Tomatoes & Smoked Ricotta" },
     tag: { it: "Vegetariano", en: "Vegetarian" },
     description: {
@@ -208,7 +213,7 @@ export const dishes: Dish[] = [
     },
   }),
   d({
-    id: "paccheri", category: "primi", price: 16, image: paccheri.url,
+    id: "paccheri", category: "primi", price: 16, image: getImgUrl(paccheri),
     name: { it: "Paccheri al Ragù Bianco di Suino Nero & Funghi di Bosco", en: "Paccheri with White Black-Pork Ragù & Wild Mushrooms" },
     tag: { it: "Territorio", en: "Local" },
     description: {
@@ -221,7 +226,7 @@ export const dishes: Dish[] = [
     },
   }),
   d({
-    id: "risotto", category: "primi", price: 18, image: risotto.url,
+    id: "risotto", category: "primi", price: 18, image: getImgUrl(risotto),
     name: { it: "Risotto all'Orologio: Zafferano Etneo, Finocchietto & Battuto di Gambero", en: "Clock Risotto: Etna Saffron, Wild Fennel & Prawn Tartare" },
     tag: { it: "Specialità", en: "Speciality" },
     description: {
@@ -234,7 +239,7 @@ export const dishes: Dish[] = [
     },
   }),
   d({
-    id: "ravioli", category: "primi", price: 15, image: ravioli.url,
+    id: "ravioli", category: "primi", price: 15, image: getImgUrl(ravioli),
     name: { it: "Ravioli Ripieni di Burrata con Salsa ai Pistacchi di Bronte", en: "Burrata Ravioli with Bronte Pistachio Sauce" },
     tag: { it: "Bronte DOP", en: "Bronte DOP" },
     description: {
@@ -247,7 +252,7 @@ export const dishes: Dish[] = [
     },
   }),
   d({
-    id: "burger", category: "secondi", price: 17, image: burger.url,
+    id: "burger", category: "secondi", price: 17, image: getImgUrl(burger),
     name: { it: "Burger Pistacchioso", en: "Pistachio Burger" },
     tag: { it: "Scottona Siciliana", en: "Sicilian Beef" },
     description: {
@@ -286,7 +291,7 @@ export const dishes: Dish[] = [
     },
   }),
   d({
-    id: "tiramisu", category: "dolci", price: 7.5, image: tiramisu.url,
+    id: "tiramisu", category: "dolci", price: 7.5, image: getImgUrl(tiramisu),
     name: { it: "Tiramisù al Cucchiaio Mandorlato Etneo", en: "Etna Almond Spoon Tiramisù" },
     tag: { it: "Della Casa", en: "House Special" },
     description: {
@@ -363,11 +368,11 @@ export const allergenLabels: Record<AllergenId, T> = {
   pesce: { it: "Pesce", en: "Fish" },
   crostacei: { it: "Crostacei", en: "Crustaceans" },
   sedano: { it: "Sedano", en: "Celery" },
-  solfiti: { it: "Solfiti", en: "Sulphites" },
-  soia: { it: "Soia", en: "Soy" },
   senape: { it: "Senape", en: "Mustard" },
   arachidi: { it: "Arachidi", en: "Peanuts" },
+  soia: { it: "Soia", en: "Soy" },
   sesamo: { it: "Sesamo", en: "Sesame" },
+  solfiti: { it: "Solfiti", en: "Sulphites" },
   lupini: { it: "Lupini", en: "Lupin" },
   molluschi: { it: "Molluschi", en: "Molluscs" },
 };
@@ -406,8 +411,12 @@ export const allergenUi = {
   },
 } satisfies Record<string, T>;
 
-export type DietId = "vegetarian" | "vegan" | "gluten_free";
-export const dietLabels: Record<DietId, T & { short: string }> = {
+export type DietId = "is_vegetarian" | "is_vegan" | "is_gluten_free" | "vegetarian" | "vegan" | "gluten_free";
+
+export const dietLabels: Record<string, T & { short?: string }> = {
+  is_vegetarian: { it: "Vegetariano", en: "Vegetarian", short: "V" },
+  is_vegan: { it: "Vegano", en: "Vegan", short: "VG" },
+  is_gluten_free: { it: "Senza Glutine", en: "Gluten Free", short: "GF" },
   vegetarian: { it: "Vegetariano", en: "Vegetarian", short: "V" },
   vegan: { it: "Vegano", en: "Vegan", short: "VG" },
   gluten_free: { it: "Senza glutine", en: "Gluten free", short: "GF" },
