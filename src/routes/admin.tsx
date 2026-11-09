@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, Camera, Eye, EyeOff, FileUp, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
 import { MenuImporter } from "@/components/menu-importer";
@@ -10,36 +10,9 @@ import { allergenLabels, categories, dietLabels, formatPrice, type AllergenId, t
 import { ClockMark } from "@/components/menu-ui";
 import { cn } from "@/lib/utils";
 
-/** Username "admin" maps to this account; the typed password is prefixed so short PINs meet the minimum length. */
-const ADMIN_EMAIL = "admin@lhorloge.it";
-const toAuthPassword = (p: string) => p;
-
-const PHOTO_BUCKET = "dish-photos";
-
-/** True when the value is a Storage object path rather than an absolute URL. */
-function isStoragePath(value: string | null | undefined): value is string {
-  return Boolean(value?.trim() && !/^https?:\/\//i.test(value.trim()));
-}
-
-/** Resolve a Storage path to its permanent public URL. */
-function photoUrl(value: string | null | undefined): string | undefined {
-  if (!value?.trim()) return undefined;
-
-  const image = value.trim();
-
-  // Compatibility with old records that still contain an absolute URL.
-  if (/^https?:\/\//i.test(image)) return image;
-
-  return supabase.storage.from(PHOTO_BUCKET).getPublicUrl(image).data.publicUrl;
-}
-
-/** Remove a photo from Storage only when the database value is a Storage path. */
-async function deleteStoredPhoto(path: string | null | undefined): Promise<string | null> {
-  if (!isStoragePath(path)) return null;
-
-  const { error } = await supabase.storage.from(PHOTO_BUCKET).remove([path]);
-  return error?.message ?? null;
-}
+/** Username "admin" maps to this account; the typed password is encrypted or prefixed if needed. */
+const ADMIN_EMAIL = "admin@admin.it";
+const toAuthPassword = (p: string) => `lh-admin-${p}`;
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -101,11 +74,14 @@ function Login() {
   const [busy, setBusy] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (user.trim().toLowerCase() !== "admin") { toast.error("Credenziali non valide"); return; }
+    const u = user.trim().toLowerCase();
+    const email = u === "admin" ? ADMIN_EMAIL : u;
+    if (!email.includes("@")) { toast.error("Credenziali non valide"); return; }
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: ADMIN_EMAIL, password: toAuthPassword(pass) });
+    let { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if (error) ({ error } = await supabase.auth.signInWithPassword({ email, password: toAuthPassword(pass) }));
     setBusy(false);
-    if (error) toast.error(error.message);
+    if (error) toast.error("Credenziali non valide");
   };
   return (
     <form onSubmit={submit} className="mx-auto mt-16 max-w-sm space-y-4 rounded-lg border border-border/40 bg-card p-6">
@@ -121,7 +97,8 @@ const empty: DishRow = {
   id: "", category: "antipasti", name_it: "", name_en: "", tag_it: "", tag_en: "", description_it: "", description_en: "",
   ingredients_it: [], ingredients_en: [], allergens: [], price: 0, image: null, signature_note_it: null, signature_note_en: null,
   signature_pairing_it: null, signature_pairing_en: null, sort_order: 0, updated_at: "", visible: true,
-  is_vegetarian: false, is_vegan: false, is_gluten_free: false, allergens_checked: true,
+  vegetarian: false, vegan: false, gluten_free: false, allergens_checked: true,
+  is_vegetarian: false, is_vegan: false, is_gluten_free: false,
   sommelier_wine_it: null, sommelier_wine_en: null, sommelier_note_it: null, sommelier_note_en: null,
 };
 
@@ -135,14 +112,7 @@ function Editor() {
     if (!confirm(`Eliminare "${r.name_it}"?`)) return;
     const { error } = await supabase.from("dishes").delete().eq("id", r.id);
     if (error) { toast.error(error.message); return; }
-
-    const photoError = await deleteStoredPhoto(r.image);
-    if (photoError) {
-      toast.error(`Piatto eliminato, ma non è stato possibile cancellare la foto: ${photoError}`);
-    } else {
-      toast.success("Piatto eliminato");
-    }
-
+    toast.success("Piatto eliminato");
     qc.invalidateQueries({ queryKey: ["dishes"] });
   };
 
@@ -162,12 +132,12 @@ function Editor() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl text-title">Piatti ({data.length})</h1>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => setImporting(true)} className="flex min-h-11 items-center gap-2 rounded-full border border-border/60 px-5 text-sm text-title">
-            <FileUp className="h-4 w-4" /> Importa da PDF
-          </button>
-          <button onClick={() => setEdit({ row: { ...empty, sort_order: (data.at(-1)?.sort_order ?? 0) + 1 }, isNew: true })} className="flex min-h-11 items-center gap-2 rounded-full bg-sage px-5 text-sm font-semibold text-sage-foreground">
-            <Plus className="h-4 w-4" /> Nuovo piatto
-          </button>
+        <button onClick={() => setImporting(true)} className="flex min-h-11 items-center gap-2 rounded-full border border-border/60 px-5 text-sm text-title">
+          <FileUp className="h-4 w-4" /> Importa da PDF
+        </button>
+        <button onClick={() => setEdit({ row: { ...empty, sort_order: (data.at(-1)?.sort_order ?? 0) + 1 }, isNew: true })} className="flex min-h-11 items-center gap-2 rounded-full bg-sage px-5 text-sm font-semibold text-sage-foreground">
+          <Plus className="h-4 w-4" /> Nuovo piatto
+        </button>
         </div>
       </div>
       {toCheck > 0 && (
@@ -181,7 +151,7 @@ function Editor() {
           <ul className="divide-y divide-border/30 rounded-lg border border-border/30 bg-card/60">
             {data.filter((r) => r.category === c.id).map((r) => (
               <li key={r.id} className={cn("flex items-center gap-3 p-3", !r.visible && "opacity-50")}>
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-surface-low">{r.image && <img src={photoUrl(r.image)} alt="" className="h-full w-full object-cover" />}</div>
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-surface-low">{r.image && <img src={r.image} alt="" className="h-full w-full object-cover" />}</div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-title">{r.name_it}</p>
                   <p className="text-xs text-muted-foreground">{formatPrice(Number(r.price), "it")}{!r.visible && " · Nascosto"}{!r.allergens_checked && <span className="text-destructive"> · Allergeni da verificare</span>}</p>
@@ -203,98 +173,33 @@ const slug = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u
 function DishForm({ initial, isNew, onDone }: { initial: DishRow; isNew: boolean; onDone: () => void }) {
   const [r, setR] = useState(initial);
   const [busy, setBusy] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const pendingUploadPath = useRef<string | null>(null);
-
   const set = <K extends keyof DishRow>(k: K, v: DishRow[K]) => setR((p) => ({ ...p, [k]: v }));
   const list = (v: string) => v.split(",").map((s) => s.trim()).filter(Boolean);
   const opt = (v: string) => (v.trim() ? v : null);
-
+  const [uploading, setUploading] = useState(false);
   const upload = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      toast.error("Seleziona un file immagine valido");
-      return;
-    }
     setUploading(true);
-    const extensionByMime: Record<string, string> = {
-      "image/jpeg": "jpg",
-      "image/png": "png",
-      "image/webp": "webp",
-      "image/gif": "gif",
-      "image/avif": "avif",
-    };
-    const ext = extensionByMime[file.type] ?? "jpg";
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const path = `${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from(PHOTO_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+    const { error } = await supabase.storage.from("dish-photos").upload(path, file, { contentType: file.type });
+    if (error) { setUploading(false); toast.error(error.message); return; }
+    const { data, error: e2 } = await supabase.storage.from("dish-photos").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
     setUploading(false);
-    if (error) { toast.error(error.message); return; }
-
-    const previousPendingPath = pendingUploadPath.current;
-    if (previousPendingPath) {
-      const cleanupError = await deleteStoredPhoto(previousPendingPath);
-      if (cleanupError) {
-        toast.error(`Nuova foto caricata, ma non è stato possibile eliminare la foto temporanea precedente: ${cleanupError}`);
-      }
-    }
-
-    pendingUploadPath.current = path;
-    set("image", path);
+    if (e2 || !data) { toast.error(e2?.message ?? "Errore"); return; }
+    set("image", data.signedUrl);
     toast.success("Foto caricata — ricorda di salvare");
-  };
-
-  const removePhoto = async () => {
-    const pendingPath = pendingUploadPath.current;
-    if (pendingPath) {
-      const error = await deleteStoredPhoto(pendingPath);
-      if (error) {
-        toast.error(`Non è stato possibile eliminare la foto caricata: ${error}`);
-        return;
-      }
-      pendingUploadPath.current = null;
-    }
-    set("image", null);
-  };
-
-  const cancel = async () => {
-    if (pendingUploadPath.current) {
-      const error = await deleteStoredPhoto(pendingUploadPath.current);
-      if (error) {
-        toast.error(`Modifiche annullate, ma non è stato possibile eliminare la foto temporanea: ${error}`);
-      }
-      pendingUploadPath.current = null;
-    }
-    onDone();
   };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!r.name_it.trim()) { toast.error("Inserisci il nome in italiano"); return; }
-    if (uploading) { toast.error("Attendi il completamento del caricamento della foto"); return; }
-
     setBusy(true);
-    const { updated_at: _u, ...payload } = {
-      ...r,
-      image: isStoragePath(r.image) ? r.image : null,
-      id: isNew ? slug(r.name_it) || crypto.randomUUID() : r.id,
-    };
-
+    const { updated_at: _u, ...payload } = { ...r, id: isNew ? slug(r.name_it) || crypto.randomUUID() : r.id };
     const { error } = isNew
       ? await supabase.from("dishes").insert(payload)
       : await supabase.from("dishes").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", r.id);
-    
     setBusy(false);
     if (error) { toast.error(error.message); return; }
-
-    pendingUploadPath.current = null;
-    if (!isNew && initial.image !== r.image) {
-      const cleanupError = await deleteStoredPhoto(initial.image);
-      if (cleanupError) {
-        toast.error(`Piatto salvato, ma non è stato possibile eliminare la vecchia foto: ${cleanupError}`);
-        onDone();
-        return;
-      }
-    }
-
     toast.success("Piatto salvato");
     onDone();
   };
@@ -364,26 +269,28 @@ function DishForm({ initial, isNew, onDone }: { initial: DishRow; isNew: boolean
         </label>
       </fieldset>
       <div className="flex flex-wrap items-center gap-3">
-        <div className="h-20 w-20 shrink-0 overflow-hidden rounded bg-surface-low">{r.image && <img src={photoUrl(r.image)} alt="" className="h-full w-full object-cover" />}</div>
+        <div className="h-20 w-20 shrink-0 overflow-hidden rounded bg-surface-low">{r.image && <img src={r.image} alt="" className="h-full w-full object-cover" />}</div>
         <label className={cn("flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border/60 px-5 text-sm text-title", uploading && "opacity-60")}>
           <Camera className="h-4 w-4" /> {uploading ? "Caricamento…" : "Carica foto"}
-          <input type="file" accept="image/*" className="sr-only" disabled={uploading || busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
+          <input type="file" accept="image/*" className="sr-only" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
         </label>
-        {r.image && <button type="button" disabled={uploading || busy} onClick={removePhoto} className="text-xs text-destructive disabled:opacity-50">Rimuovi foto</button>}
+        {r.image && <button type="button" onClick={() => set("image", null)} className="text-xs text-destructive">Rimuovi foto</button>}
       </div>
       <label className="flex items-center gap-2 text-sm text-title">
         <input type="checkbox" checked={r.visible} onChange={(e) => set("visible", e.target.checked)} className="h-5 w-5 accent-sage" />
         Visibile nel menu
       </label>
-      <p className="border-t border-border/30 pt-4 text-xs uppercase tracking-widest text-muted-foreground">Piatto iconico (facoltativo)</p>
+      <label className="block text-xs text-muted-foreground">Oppure indirizzo immagine (URL)
+        <input className={cn(input, "mt-1")} value={r.image ?? ""} onChange={(e) => set("image", opt(e.target.value))} placeholder="https://…" />
+      </label>
+      <p className="border-t border-border/30 pt-4 text-xs uppercase tracking-widest text-muted-foreground">Abbinamento del sommelier (facoltativo)</p>
+      {pair("Vino / cocktail consigliato", "sommelier_wine_it", "sommelier_wine_en")}
+      {pair("Perché questo abbinamento", "sommelier_note_it", "sommelier_note_en")}
+      <p className="border-t border-border/30 pt-4 text-xs uppercase tracking-widest text-muted-foreground">Nota dello chef (facoltativo)</p>
       {pair("Nota", "signature_note_it", "signature_note_en")}
-      {pair("Abbinamento", "signature_pairing_it", "signature_pairing_en")}
-      <p className="border-t border-border/30 pt-4 text-xs uppercase tracking-widest text-muted-foreground">Consiglio del Sommelier (facoltativo)</p>
-      {pair("Vino / cocktail", "sommelier_wine_it", "sommelier_wine_en")}
-      {pair("Nota di degustazione", "sommelier_note_it", "sommelier_note_en")}
       <div className="flex gap-3 pt-2">
-        <button disabled={busy || uploading} className="min-h-11 rounded-full bg-sage px-6 text-sm font-semibold text-sage-foreground disabled:opacity-60">Salva</button>
-        <button type="button" disabled={busy || uploading} onClick={cancel} className="min-h-11 rounded-full border border-border/60 px-6 text-sm text-title disabled:opacity-60">Annulla</button>
+        <button disabled={busy} className="min-h-11 rounded-full bg-sage px-6 text-sm font-semibold text-sage-foreground disabled:opacity-60">Salva</button>
+        <button type="button" onClick={onDone} className="min-h-11 rounded-full border border-border/60 px-6 text-sm text-title">Annulla</button>
       </div>
     </form>
   );
