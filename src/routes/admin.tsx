@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Camera, Eye, EyeOff, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Camera, Eye, EyeOff, FileUp, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
+import { MenuImporter } from "@/components/menu-importer";
 import { supabase } from "@/integrations/supabase/client";
 import { allDishesQuery, type DishRow } from "@/lib/menu-api";
 import { allergenLabels, categories, dietLabels, formatPrice, type AllergenId, type DietId } from "@/lib/menu-data";
@@ -62,25 +63,14 @@ function AdminPage() {
   useEffect(() => {
     const check = async () => {
       const { data } = await supabase.auth.getUser();
-      if (!data.user) {
-        setState("out");
-        return;
-      }
-
-      const { data: ok } = await supabase.rpc("has_role", {
-        _user_id: data.user.id,
-        _role: "admin",
-      });
-
+      if (!data.user) { setState("out"); return; }
+      const { data: ok } = await supabase.rpc("has_role", { _user_id: data.user.id, _role: "admin" });
       setState(ok ? "in" : "denied");
     };
-
     check();
-
     const { data: sub } = supabase.auth.onAuthStateChange((e) => {
       if (e === "SIGNED_IN" || e === "SIGNED_OUT") check();
     });
-
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -88,145 +78,65 @@ function AdminPage() {
     <div className="min-h-screen">
       <header className="border-b border-border/30">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-          <Link to="/" className="group flex items-center gap-3">
-            <ClockMark />
-            <span className="font-display text-xl text-title">Admin</span>
-          </Link>
-
+          <Link to="/" className="group flex items-center gap-3"><ClockMark /><span className="font-display text-xl text-title">Admin</span></Link>
           {state === "in" && (
-            <button
-              onClick={() => supabase.auth.signOut()}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-title"
-            >
+            <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-title">
               <LogOut className="h-4 w-4" /> Esci
             </button>
           )}
         </div>
       </header>
-
-      {state === "loading" && (
-        <p className="p-10 text-center text-muted-foreground">…</p>
-      )}
-
+      {state === "loading" && <p className="p-10 text-center text-muted-foreground">…</p>}
       {(state === "out" || state === "denied") && <Login />}
       {state === "in" && <Editor />}
     </div>
   );
 }
 
-const input =
-  "w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground focus:border-sage focus:outline-none";
+const input = "w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground focus:border-sage focus:outline-none";
 
 function Login() {
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [busy, setBusy] = useState(false);
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (user.trim().toLowerCase() !== "admin") {
-      toast.error("Credenziali non valide");
-      return;
-    }
-
+    if (user.trim().toLowerCase() !== "admin") { toast.error("Credenziali non valide"); return; }
     setBusy(true);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: ADMIN_EMAIL,
-      password: toAuthPassword(pass),
-    });
-
+    const { error } = await supabase.auth.signInWithPassword({ email: ADMIN_EMAIL, password: toAuthPassword(pass) });
     setBusy(false);
-
     if (error) toast.error(error.message);
   };
-
   return (
-    <form
-      onSubmit={submit}
-      className="mx-auto mt-16 max-w-sm space-y-4 rounded-lg border border-border/40 bg-card p-6"
-    >
+    <form onSubmit={submit} className="mx-auto mt-16 max-w-sm space-y-4 rounded-lg border border-border/40 bg-card p-6">
       <h1 className="font-display text-2xl text-title">Accesso admin</h1>
-
-      <label className="block text-sm text-muted-foreground">
-        Utente
-        <input
-          className={cn(input, "mt-1")}
-          value={user}
-          onChange={(e) => setUser(e.target.value)}
-          autoComplete="username"
-        />
-      </label>
-
-      <label className="block text-sm text-muted-foreground">
-        Password
-        <input
-          type="password"
-          className={cn(input, "mt-1")}
-          value={pass}
-          onChange={(e) => setPass(e.target.value)}
-          autoComplete="current-password"
-        />
-      </label>
-
-      <button
-        disabled={busy}
-        className="min-h-11 w-full rounded-full bg-sage text-sm font-semibold text-sage-foreground disabled:opacity-60"
-      >
-        Entra
-      </button>
+      <label className="block text-sm text-muted-foreground">Utente<input className={cn(input, "mt-1")} value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" /></label>
+      <label className="block text-sm text-muted-foreground">Password<input type="password" className={cn(input, "mt-1")} value={pass} onChange={(e) => setPass(e.target.value)} autoComplete="current-password" /></label>
+      <button disabled={busy} className="min-h-11 w-full rounded-full bg-sage text-sm font-semibold text-sage-foreground disabled:opacity-60">Entra</button>
     </form>
   );
 }
 
 const empty: DishRow = {
-  id: "",
-  category: "antipasti",
-  name_it: "",
-  name_en: "",
-  tag_it: "",
-  tag_en: "",
-  description_it: "",
-  description_en: "",
-  ingredients_it: [],
-  ingredients_en: [],
-  allergens: [],
-  price: 0,
-  image: null,
-  signature_note_it: null,
-  signature_note_en: null,
-  signature_pairing_it: null,
-  signature_pairing_en: null,
-  sort_order: 0,
-  updated_at: "",
-  visible: true,
-  is_vegetarian: false,
-  is_vegan: false,
-  is_gluten_free: false,
-  sommelier_wine_it: null,
-  sommelier_wine_en: null,
-  sommelier_note_it: null,
-  sommelier_note_en: null,
+  id: "", category: "antipasti", name_it: "", name_en: "", tag_it: "", tag_en: "", description_it: "", description_en: "",
+  ingredients_it: [], ingredients_en: [], allergens: [], price: 0, image: null, signature_note_it: null, signature_note_en: null,
+  signature_pairing_it: null, signature_pairing_en: null, sort_order: 0, updated_at: "", visible: true,
+  is_vegetarian: false, is_vegan: false, is_gluten_free: false, allergens_checked: true,
+  sommelier_wine_it: null, sommelier_wine_en: null, sommelier_note_it: null, sommelier_note_en: null,
 };
 
 function Editor() {
   const qc = useQueryClient();
   const { data = [] } = useQuery(allDishesQuery);
   const [edit, setEdit] = useState<{ row: DishRow; isNew: boolean } | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const remove = async (r: DishRow) => {
     if (!confirm(`Eliminare "${r.name_it}"?`)) return;
-
     const { error } = await supabase.from("dishes").delete().eq("id", r.id);
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    if (error) { toast.error(error.message); return; }
 
     const photoError = await deleteStoredPhoto(r.image);
-
     if (photoError) {
       toast.error(`Piatto eliminato, ma non è stato possibile cancellare la foto: ${photoError}`);
     } else {
@@ -237,124 +147,50 @@ function Editor() {
   };
 
   const toggle = async (r: DishRow) => {
-    const { error } = await supabase
-      .from("dishes")
-      .update({ visible: !r.visible })
-      .eq("id", r.id);
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
-    toast.success(
-      r.visible ? "Piatto nascosto dal menu" : "Piatto di nuovo visibile",
-    );
-
+    const { error } = await supabase.from("dishes").update({ visible: !r.visible }).eq("id", r.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(r.visible ? "Piatto nascosto dal menu" : "Piatto di nuovo visibile");
     qc.invalidateQueries({ queryKey: ["dishes"] });
   };
 
-  if (edit) {
-    return (
-      <DishForm
-        initial={edit.row}
-        isNew={edit.isNew}
-        onDone={() => {
-          setEdit(null);
-          qc.invalidateQueries({ queryKey: ["dishes"] });
-        }}
-      />
-    );
-  }
+  const toCheck = data.filter((r) => !r.allergens_checked).length;
+  if (importing) return <MenuImporter nextOrder={(data.at(-1)?.sort_order ?? 0) + 1} onClose={() => setImporting(false)} onDone={() => { setImporting(false); qc.invalidateQueries({ queryKey: ["dishes"] }); }} />;
+  if (edit) return <DishForm initial={edit.row} isNew={edit.isNew} onDone={() => { setEdit(null); qc.invalidateQueries({ queryKey: ["dishes"] }); }} />;
 
   return (
     <main className="mx-auto max-w-5xl px-5 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-display text-2xl text-title">
-          Piatti ({data.length})
-        </h1>
-
-        <button
-          onClick={() =>
-            setEdit({
-              row: {
-                ...empty,
-                sort_order: (data.at(-1)?.sort_order ?? 0) + 1,
-              },
-              isNew: true,
-            })
-          }
-          className="flex min-h-11 items-center gap-2 rounded-full bg-sage px-5 text-sm font-semibold text-sage-foreground"
-        >
-          <Plus className="h-4 w-4" /> Nuovo piatto
-        </button>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl text-title">Piatti ({data.length})</h1>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => setImporting(true)} className="flex min-h-11 items-center gap-2 rounded-full border border-border/60 px-5 text-sm text-title">
+            <FileUp className="h-4 w-4" /> Importa da PDF
+          </button>
+          <button onClick={() => setEdit({ row: { ...empty, sort_order: (data.at(-1)?.sort_order ?? 0) + 1 }, isNew: true })} className="flex min-h-11 items-center gap-2 rounded-full bg-sage px-5 text-sm font-semibold text-sage-foreground">
+            <Plus className="h-4 w-4" /> Nuovo piatto
+          </button>
+        </div>
       </div>
-
+      {toCheck > 0 && (
+        <p className="mb-6 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4 shrink-0" /> {toCheck} piatti con allergeni da verificare: restano nascosti finché non li confermi.
+        </p>
+      )}
       {categories.map((c) => (
         <section key={c.id} className="mb-8">
-          <h2 className="mb-3 font-display text-lg italic text-title">
-            {c.label.it}
-          </h2>
-
+          <h2 className="mb-3 font-display text-lg italic text-title">{c.label.it}</h2>
           <ul className="divide-y divide-border/30 rounded-lg border border-border/30 bg-card/60">
-            {data
-              .filter((r) => r.category === c.id)
-              .map((r) => (
-                <li
-                  key={r.id}
-                  className={cn(
-                    "flex items-center gap-3 p-3",
-                    !r.visible && "opacity-50",
-                  )}
-                >
-                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-surface-low">
-                    {r.image && (
-                      <img
-                        src={photoUrl(r.image)}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-title">{r.name_it}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatPrice(Number(r.price), "it")}
-                      {!r.visible && " · Nascosto"}
-                    </p>
-                  </div>
-
-                  <button
-                    aria-label={r.visible ? "Nascondi dal menu" : "Mostra nel menu"}
-                    title={r.visible ? "Nascondi dal menu" : "Mostra nel menu"}
-                    onClick={() => toggle(r)}
-                    className="grid h-10 w-10 place-items-center rounded-full border border-border/60 hover:text-sage"
-                  >
-                    {r.visible ? (
-                      <Eye className="h-4 w-4" />
-                    ) : (
-                      <EyeOff className="h-4 w-4" />
-                    )}
-                  </button>
-
-                  <button
-                    aria-label="Modifica"
-                    onClick={() => setEdit({ row: r, isNew: false })}
-                    className="grid h-10 w-10 place-items-center rounded-full border border-border/60 hover:text-sage"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-
-                  <button
-                    aria-label="Elimina"
-                    onClick={() => remove(r)}
-                    className="grid h-10 w-10 place-items-center rounded-full border border-border/60 text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </li>
-              ))}
+            {data.filter((r) => r.category === c.id).map((r) => (
+              <li key={r.id} className={cn("flex items-center gap-3 p-3", !r.visible && "opacity-50")}>
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-surface-low">{r.image && <img src={photoUrl(r.image)} alt="" className="h-full w-full object-cover" />}</div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-title">{r.name_it}</p>
+                  <p className="text-xs text-muted-foreground">{formatPrice(Number(r.price), "it")}{!r.visible && " · Nascosto"}{!r.allergens_checked && <span className="text-destructive"> · Allergeni da verificare</span>}</p>
+                </div>
+                <button aria-label={r.visible ? "Nascondi dal menu" : "Mostra nel menu"} title={r.visible ? "Nascondi dal menu" : "Mostra nel menu"} onClick={() => toggle(r)} className="grid h-10 w-10 place-items-center rounded-full border border-border/60 hover:text-sage">{r.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</button>
+                <button aria-label="Modifica" onClick={() => setEdit({ row: r, isNew: false })} className="grid h-10 w-10 place-items-center rounded-full border border-border/60 hover:text-sage"><Pencil className="h-4 w-4" /></button>
+                <button aria-label="Elimina" onClick={() => remove(r)} className="grid h-10 w-10 place-items-center rounded-full border border-border/60 text-destructive"><Trash2 className="h-4 w-4" /></button>
+              </li>
+            ))}
           </ul>
         </section>
       ))}
@@ -362,36 +198,16 @@ function Editor() {
   );
 }
 
-const slug = (s: string) =>
-  s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+const slug = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-function DishForm({
-  initial,
-  isNew,
-  onDone,
-}: {
-  initial: DishRow;
-  isNew: boolean;
-  onDone: () => void;
-}) {
+function DishForm({ initial, isNew, onDone }: { initial: DishRow; isNew: boolean; onDone: () => void }) {
   const [r, setR] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
-
-  // Tracks a newly uploaded photo until the dish is saved or the form is cancelled.
   const pendingUploadPath = useRef<string | null>(null);
 
-  const set = <K extends keyof DishRow>(k: K, v: DishRow[K]) =>
-    setR((p) => ({ ...p, [k]: v }));
-
-  const list = (v: string) =>
-    v.split(",").map((s) => s.trim()).filter(Boolean);
-
+  const set = <K extends keyof DishRow>(k: K, v: DishRow[K]) => setR((p) => ({ ...p, [k]: v }));
+  const list = (v: string) => v.split(",").map((s) => s.trim()).filter(Boolean);
   const opt = (v: string) => (v.trim() ? v : null);
 
   const upload = async (file: File) => {
@@ -399,9 +215,7 @@ function DishForm({
       toast.error("Seleziona un file immagine valido");
       return;
     }
-
     setUploading(true);
-
     const extensionByMime: Record<string, string> = {
       "image/jpeg": "jpg",
       "image/png": "png",
@@ -409,30 +223,15 @@ function DishForm({
       "image/gif": "gif",
       "image/avif": "avif",
     };
-
     const ext = extensionByMime[file.type] ?? "jpg";
     const path = `${crypto.randomUUID()}.${ext}`;
-
-    const { error } = await supabase.storage
-      .from(PHOTO_BUCKET)
-      .upload(path, file, {
-        contentType: file.type,
-        upsert: false,
-      });
-
+    const { error } = await supabase.storage.from(PHOTO_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
     setUploading(false);
+    if (error) { toast.error(error.message); return; }
 
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
-    // If another new photo was uploaded but not saved, remove it to avoid orphan files.
     const previousPendingPath = pendingUploadPath.current;
-
     if (previousPendingPath) {
       const cleanupError = await deleteStoredPhoto(previousPendingPath);
-
       if (cleanupError) {
         toast.error(`Nuova foto caricata, ma non è stato possibile eliminare la foto temporanea precedente: ${cleanupError}`);
       }
@@ -445,86 +244,52 @@ function DishForm({
 
   const removePhoto = async () => {
     const pendingPath = pendingUploadPath.current;
-
     if (pendingPath) {
       const error = await deleteStoredPhoto(pendingPath);
-
       if (error) {
         toast.error(`Non è stato possibile eliminare la foto caricata: ${error}`);
         return;
       }
-
       pendingUploadPath.current = null;
     }
-
-    // The original photo is deleted from Storage only after the database save succeeds.
     set("image", null);
   };
 
   const cancel = async () => {
     if (pendingUploadPath.current) {
       const error = await deleteStoredPhoto(pendingUploadPath.current);
-
       if (error) {
         toast.error(`Modifiche annullate, ma non è stato possibile eliminare la foto temporanea: ${error}`);
       }
-
       pendingUploadPath.current = null;
     }
-
     onDone();
   };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!r.name_it.trim()) {
-      toast.error("Inserisci il nome in italiano");
-      return;
-    }
-
-    if (uploading) {
-      toast.error("Attendi il completamento del caricamento della foto");
-      return;
-    }
+    if (!r.name_it.trim()) { toast.error("Inserisci il nome in italiano"); return; }
+    if (uploading) { toast.error("Attendi il completamento del caricamento della foto"); return; }
 
     setBusy(true);
-
     const { updated_at: _u, ...payload } = {
       ...r,
-      // Only a Storage path or null is ever written to the database.
       image: isStoragePath(r.image) ? r.image : null,
       id: isNew ? slug(r.name_it) || crypto.randomUUID() : r.id,
     };
 
     const { error } = isNew
       ? await supabase.from("dishes").insert(payload)
-      : await supabase
-          .from("dishes")
-          .update({
-            ...payload,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", r.id);
-
+      : await supabase.from("dishes").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", r.id);
+    
     setBusy(false);
+    if (error) { toast.error(error.message); return; }
 
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
-    // The new photo is now referenced by the saved database row.
     pendingUploadPath.current = null;
-
-    // Delete the previous Storage object only after the database update succeeds.
     if (!isNew && initial.image !== r.image) {
       const cleanupError = await deleteStoredPhoto(initial.image);
-
       if (cleanupError) {
-        toast.error(
-          `Piatto salvato, ma non è stato possibile eliminare la vecchia foto: ${cleanupError}`,
-        );
+        toast.error(`Piatto salvato, ma non è stato possibile eliminare la vecchia foto: ${cleanupError}`);
         onDone();
         return;
       }
@@ -534,37 +299,13 @@ function DishForm({
     onDone();
   };
 
-  const pair = (
-    label: string,
-    it: keyof DishRow,
-    en: keyof DishRow,
-    area = false,
-  ) => (
+  const pair = (label: string, it: keyof DishRow, en: keyof DishRow, area = false) => (
     <div className="grid gap-3 sm:grid-cols-2">
       {([["IT", it], ["EN", en]] as const).map(([l, k]) => (
-        <label key={l} className="block text-xs text-muted-foreground">
-          {label} ({l})
-          {area ? (
-            <textarea
-              rows={3}
-              className={cn(input, "mt-1")}
-              value={(r[k] as string) ?? ""}
-              onChange={(e) => set(k, e.target.value as never)}
-            />
-          ) : (
-            <input
-              className={cn(input, "mt-1")}
-              value={(r[k] as string) ?? ""}
-              onChange={(e) =>
-                set(
-                  k,
-                  (k.startsWith("signature") || k.startsWith("sommelier")
-                    ? opt(e.target.value)
-                    : e.target.value) as never,
-                )
-              }
-            />
-          )}
+        <label key={l} className="block text-xs text-muted-foreground">{label} ({l})
+          {area
+            ? <textarea rows={3} className={cn(input, "mt-1")} value={(r[k] as string) ?? ""} onChange={(e) => set(k, e.target.value as never)} />
+            : <input className={cn(input, "mt-1")} value={(r[k] as string) ?? ""} onChange={(e) => set(k, (k.startsWith("signature") || k.startsWith("sommelier") ? opt(e.target.value) : e.target.value) as never)} />}
         </label>
       ))}
     </div>
@@ -572,213 +313,77 @@ function DishForm({
 
   return (
     <form onSubmit={save} className="mx-auto max-w-3xl space-y-5 px-5 py-8">
-      <h1 className="font-display text-2xl text-title">
-        {isNew ? "Nuovo piatto" : "Modifica piatto"}
-      </h1>
-
+      <h1 className="font-display text-2xl text-title">{isNew ? "Nuovo piatto" : "Modifica piatto"}</h1>
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="block text-xs text-muted-foreground">
-          Categoria
-          <select
-            className={cn(input, "mt-1")}
-            value={r.category}
-            onChange={(e) => set("category", e.target.value)}
-          >
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label.it}
-              </option>
-            ))}
+        <label className="block text-xs text-muted-foreground">Categoria
+          <select className={cn(input, "mt-1")} value={r.category} onChange={(e) => set("category", e.target.value)}>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.label.it}</option>)}
           </select>
         </label>
-
-        <label className="block text-xs text-muted-foreground">
-          Prezzo (€)
-          <input
-            type="number"
-            step="0.5"
-            min="0"
-            className={cn(input, "mt-1")}
-            value={r.price}
-            onChange={(e) => set("price", Number(e.target.value))}
-          />
+        <label className="block text-xs text-muted-foreground">Prezzo (€)
+          <input type="number" step="0.5" min="0" className={cn(input, "mt-1")} value={r.price} onChange={(e) => set("price", Number(e.target.value))} />
         </label>
-
-        <label className="block text-xs text-muted-foreground">
-          Ordine
-          <input
-            type="number"
-            className={cn(input, "mt-1")}
-            value={r.sort_order}
-            onChange={(e) => set("sort_order", Number(e.target.value))}
-          />
+        <label className="block text-xs text-muted-foreground">Ordine
+          <input type="number" className={cn(input, "mt-1")} value={r.sort_order} onChange={(e) => set("sort_order", Number(e.target.value))} />
         </label>
       </div>
-
       {pair("Nome", "name_it", "name_en")}
       {pair("Etichetta", "tag_it", "tag_en")}
       {pair("Descrizione", "description_it", "description_en", true)}
-
       <div className="grid gap-3 sm:grid-cols-2">
         {(["it", "en"] as const).map((l) => (
-          <label key={l} className="block text-xs text-muted-foreground">
-            Ingredienti ({l.toUpperCase()}, separati da virgola)
-            <input
-              className={cn(input, "mt-1")}
-              defaultValue={r[`ingredients_${l}`].join(", ")}
-              onBlur={(e) =>
-                set(`ingredients_${l}`, list(e.target.value))
-              }
-            />
+          <label key={l} className="block text-xs text-muted-foreground">Ingredienti ({l.toUpperCase()}, separati da virgola)
+            <input className={cn(input, "mt-1")} defaultValue={r[`ingredients_${l}`].join(", ")} onBlur={(e) => set(`ingredients_${l}`, list(e.target.value))} />
           </label>
         ))}
       </div>
-
       <fieldset>
-        <legend className="mb-2 text-xs text-muted-foreground">
-          Allergeni
-        </legend>
+        <legend className="mb-2 text-xs text-muted-foreground">Allergeni</legend>
         <div className="flex flex-wrap gap-2">
           {(Object.keys(allergenLabels) as AllergenId[]).map((a) => {
             const on = r.allergens.includes(a);
-
             return (
-              <button
-                type="button"
-                key={a}
-                onClick={() =>
-                  set(
-                    "allergens",
-                    on
-                      ? r.allergens.filter((x) => x !== a)
-                      : [...r.allergens, a],
-                  )
-                }
-                className={cn(
-                  "min-h-9 rounded-full border px-3 text-xs",
-                  on
-                    ? "border-destructive bg-destructive/15 text-destructive"
-                    : "border-border/60 text-muted-foreground",
-                )}
-              >
+              <button type="button" key={a} onClick={() => set("allergens", on ? r.allergens.filter((x) => x !== a) : [...r.allergens, a])}
+                className={cn("min-h-9 rounded-full border px-3 text-xs", on ? "border-destructive bg-destructive/15 text-destructive" : "border-border/60 text-muted-foreground")}>
                 {allergenLabels[a].it}
               </button>
             );
           })}
         </div>
-      </fieldset>
-
-      <fieldset>
-        <legend className="mb-2 text-xs text-muted-foreground">
-          Diete
-        </legend>
-        <div className="flex flex-wrap gap-4">
+        <div className="mt-3 flex flex-wrap gap-2">
           {(Object.keys(dietLabels) as DietId[]).map((k) => (
-            <label
-              key={k}
-              className="flex items-center gap-2 text-sm text-title"
-            >
-              <input
-                type="checkbox"
-                checked={r[k]}
-                onChange={(e) => set(k, e.target.checked)}
-                className="h-5 w-5 accent-sage"
-              />
+            <button type="button" key={k} onClick={() => set(k, !r[k])}
+              className={cn("min-h-9 rounded-full border px-3 text-xs", r[k] ? "border-sage bg-sage/15 text-sage" : "border-border/60 text-muted-foreground")}>
               {dietLabels[k].it}
-            </label>
+            </button>
           ))}
         </div>
-      </fieldset>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="h-20 w-20 shrink-0 overflow-hidden rounded bg-surface-low">
-          {r.image && (
-            <img
-              src={photoUrl(r.image)}
-              alt=""
-              className="h-full w-full object-cover"
-            />
-          )}
-        </div>
-
-        <label
-          className={cn(
-            "flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border/60 px-5 text-sm text-title",
-            uploading && "opacity-60",
-          )}
-        >
-          <Camera className="h-4 w-4" />
-          {uploading ? "Caricamento…" : "Carica foto"}
-          <input
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            disabled={uploading || busy}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) upload(f);
-              e.target.value = "";
-            }}
-          />
+        <label className={cn("mt-3 flex items-center gap-2 rounded-md border p-3 text-sm", r.allergens_checked ? "border-border/40 text-title" : "border-destructive/60 text-destructive")}>
+          <input type="checkbox" checked={r.allergens_checked} onChange={(e) => set("allergens_checked", e.target.checked)} className="h-5 w-5 accent-sage" />
+          Ho verificato gli allergeni di questo piatto (necessario per pubblicarlo)
         </label>
-
-        {r.image && (
-          <button
-            type="button"
-            disabled={uploading || busy}
-            onClick={removePhoto}
-            className="text-xs text-destructive disabled:opacity-50"
-          >
-            Rimuovi foto
-          </button>
-        )}
+      </fieldset>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="h-20 w-20 shrink-0 overflow-hidden rounded bg-surface-low">{r.image && <img src={photoUrl(r.image)} alt="" className="h-full w-full object-cover" />}</div>
+        <label className={cn("flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border/60 px-5 text-sm text-title", uploading && "opacity-60")}>
+          <Camera className="h-4 w-4" /> {uploading ? "Caricamento…" : "Carica foto"}
+          <input type="file" accept="image/*" className="sr-only" disabled={uploading || busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
+        </label>
+        {r.image && <button type="button" disabled={uploading || busy} onClick={removePhoto} className="text-xs text-destructive disabled:opacity-50">Rimuovi foto</button>}
       </div>
-
       <label className="flex items-center gap-2 text-sm text-title">
-        <input
-          type="checkbox"
-          checked={r.visible}
-          onChange={(e) => set("visible", e.target.checked)}
-          className="h-5 w-5 accent-sage"
-        />
+        <input type="checkbox" checked={r.visible} onChange={(e) => set("visible", e.target.checked)} className="h-5 w-5 accent-sage" />
         Visibile nel menu
       </label>
-
-      <p className="text-xs text-muted-foreground">
-        Le fotografie vengono archiviate permanentemente nello spazio Storage
-        di Supabase. Per sostituire o rimuovere una foto, usa i comandi qui sopra.
-      </p>
-
-      <p className="border-t border-border/30 pt-4 text-xs uppercase tracking-widest text-muted-foreground">
-        Piatto iconico (facoltativo)
-      </p>
-
+      <p className="border-t border-border/30 pt-4 text-xs uppercase tracking-widest text-muted-foreground">Piatto iconico (facoltativo)</p>
       {pair("Nota", "signature_note_it", "signature_note_en")}
       {pair("Abbinamento", "signature_pairing_it", "signature_pairing_en")}
-
-      <p className="border-t border-border/30 pt-4 text-xs uppercase tracking-widest text-muted-foreground">
-        Consiglio del Sommelier (facoltativo)
-      </p>
-
+      <p className="border-t border-border/30 pt-4 text-xs uppercase tracking-widest text-muted-foreground">Consiglio del Sommelier (facoltativo)</p>
       {pair("Vino / cocktail", "sommelier_wine_it", "sommelier_wine_en")}
       {pair("Nota di degustazione", "sommelier_note_it", "sommelier_note_en")}
-
       <div className="flex gap-3 pt-2">
-        <button
-          disabled={busy || uploading}
-          className="min-h-11 rounded-full bg-sage px-6 text-sm font-semibold text-sage-foreground disabled:opacity-60"
-        >
-          Salva
-        </button>
-
-        <button
-          type="button"
-          disabled={busy || uploading}
-          onClick={cancel}
-          className="min-h-11 rounded-full border border-border/60 px-6 text-sm text-title disabled:opacity-60"
-        >
-          Annulla
-        </button>
+        <button disabled={busy || uploading} className="min-h-11 rounded-full bg-sage px-6 text-sm font-semibold text-sage-foreground disabled:opacity-60">Salva</button>
+        <button type="button" disabled={busy || uploading} onClick={cancel} className="min-h-11 rounded-full border border-border/60 px-6 text-sm text-title disabled:opacity-60">Annulla</button>
       </div>
     </form>
   );
