@@ -10,7 +10,6 @@ import { allergenLabels, categories, dietLabels, formatPrice, type AllergenId, t
 import { ClockMark } from "@/components/menu-ui";
 import { cn } from "@/lib/utils";
 
-/** Username "admin" maps to this account; the typed password is encrypted or prefixed if needed. */
 const ADMIN_EMAIL = "admin@admin.it";
 const toAuthPassword = (p: string) => `lh-admin-${p}`;
 
@@ -36,7 +35,10 @@ function AdminPage() {
   useEffect(() => {
     const check = async () => {
       const { data } = await supabase.auth.getUser();
-      if (!data.user) { setState("out"); return; }
+      if (!data.user) { 
+        setState("out"); 
+        return; 
+      }
       const { data: ok } = await supabase.rpc("has_role", { _user_id: data.user.id, _role: "admin" });
       setState(ok ? "in" : "denied");
     };
@@ -51,7 +53,10 @@ function AdminPage() {
     <div className="min-h-screen">
       <header className="border-b border-border/30">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-          <Link to="/" className="group flex items-center gap-3"><ClockMark /><span className="font-display text-xl text-title">Admin</span></Link>
+          <Link to="/" className="group flex items-center gap-3">
+            <ClockMark />
+            <span className="font-display text-xl text-title">Admin</span>
+          </Link>
           {state === "in" && (
             <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-title">
               <LogOut className="h-4 w-4" /> Esci
@@ -72,34 +77,73 @@ function Login() {
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [busy, setBusy] = useState(false);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const u = user.trim().toLowerCase();
     const email = u === "admin" ? ADMIN_EMAIL : u;
-    if (!email.includes("@")) { toast.error("Credenziali non valide"); return; }
+    if (!email.includes("@")) { 
+      toast.error("Credenziali non valide"); 
+      return; 
+    }
     setBusy(true);
     let { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    if (error) ({ error } = await supabase.auth.signInWithPassword({ email, password: toAuthPassword(pass) }));
+    if (error) {
+      const res = await supabase.auth.signInWithPassword({ email, password: toAuthPassword(pass) });
+      error = res.error;
+    }
     setBusy(false);
     if (error) toast.error("Credenziali non valide");
   };
+
   return (
     <form onSubmit={submit} className="mx-auto mt-16 max-w-sm space-y-4 rounded-lg border border-border/40 bg-card p-6">
       <h1 className="font-display text-2xl text-title">Accesso admin</h1>
-      <label className="block text-sm text-muted-foreground">Utente<input className={cn(input, "mt-1")} value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" /></label>
-      <label className="block text-sm text-muted-foreground">Password<input type="password" className={cn(input, "mt-1")} value={pass} onChange={(e) => setPass(e.target.value)} autoComplete="current-password" /></label>
+      <label className="block text-sm text-muted-foreground">
+        Utente
+        <input className={cn(input, "mt-1")} value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" />
+      </label>
+      <label className="block text-sm text-muted-foreground">
+        Password
+        <input type="password" className={cn(input, "mt-1")} value={pass} onChange={(e) => setPass(e.target.value)} autoComplete="current-password" />
+      </label>
       <button disabled={busy} className="min-h-11 w-full rounded-full bg-sage text-sm font-semibold text-sage-foreground disabled:opacity-60">Entra</button>
     </form>
   );
 }
 
 const empty: DishRow = {
-  id: "", category: "antipasti", name_it: "", name_en: "", tag_it: "", tag_en: "", description_it: "", description_en: "",
-  ingredients_it: [], ingredients_en: [], allergens: [], price: 0, image: null, signature_note_it: null, signature_note_en: null,
-  signature_pairing_it: null, signature_pairing_en: null, sort_order: 0, updated_at: "", visible: true,
-  vegetarian: false, vegan: false, gluten_free: false, allergens_checked: true,
-  is_vegetarian: false, is_vegan: false, is_gluten_free: false,
-  sommelier_wine_it: null, sommelier_wine_en: null, sommelier_note_it: null, sommelier_note_en: null,
+  id: "", 
+  category: "antipasti", 
+  name_it: "", 
+  name_en: "", 
+  tag_it: "", 
+  tag_en: "", 
+  description_it: "", 
+  description_en: "",
+  ingredients_it: [], 
+  ingredients_en: [], 
+  allergens: [], 
+  price: 0, 
+  image: null, 
+  signature_note_it: null, 
+  signature_note_en: null,
+  signature_pairing_it: null, 
+  signature_pairing_en: null, 
+  sort_order: 0, 
+  updated_at: "", 
+  visible: true,
+  vegetarian: false, 
+  vegan: false, 
+  gluten_free: false, 
+  allergens_checked: true,
+  is_vegetarian: false, 
+  is_vegan: false, 
+  is_gluten_free: false,
+  sommelier_wine_it: null, 
+  sommelier_wine_en: null, 
+  sommelier_note_it: null, 
+  sommelier_note_en: null,
 };
 
 function Editor() {
@@ -111,33 +155,63 @@ function Editor() {
   const remove = async (r: DishRow) => {
     if (!confirm(`Eliminare "${r.name_it}"?`)) return;
     const { error } = await supabase.from("dishes").delete().eq("id", r.id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { 
+      toast.error(error.message); 
+      return; 
+    }
     toast.success("Piatto eliminato");
     qc.invalidateQueries({ queryKey: ["dishes"] });
   };
 
   const toggle = async (r: DishRow) => {
     const { error } = await supabase.from("dishes").update({ visible: !r.visible }).eq("id", r.id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { 
+      toast.error(error.message); 
+      return; 
+    }
     toast.success(r.visible ? "Piatto nascosto dal menu" : "Piatto di nuovo visibile");
     qc.invalidateQueries({ queryKey: ["dishes"] });
   };
 
   const toCheck = data.filter((r) => !r.allergens_checked).length;
-  if (importing) return <MenuImporter nextOrder={(data.at(-1)?.sort_order ?? 0) + 1} onClose={() => setImporting(false)} onDone={() => { setImporting(false); qc.invalidateQueries({ queryKey: ["dishes"] }); }} />;
-  if (edit) return <DishForm initial={edit.row} isNew={edit.isNew} onDone={() => { setEdit(null); qc.invalidateQueries({ queryKey: ["dishes"] }); }} />;
+  
+  if (importing) {
+    return (
+      <MenuImporter 
+        nextOrder={(data.at(-1)?.sort_order ?? 0) + 1} 
+        onClose={() => setImporting(false)} 
+        onDone={() => { 
+          setImporting(false); 
+          qc.invalidateQueries({ queryKey: ["dishes"] }); 
+        }} 
+      />
+    );
+  }
+
+  if (edit) {
+    return (
+      <DishForm 
+        initial={edit.row} 
+        isNew={edit.isNew} 
+        onDone={() => { 
+          setEdit(null); 
+          qc.invalidateQueries({ queryKey: ["dishes"] }); 
+        }} 
+      />
+    );
+  }
 
   return (
     <main className="mx-auto max-w-5xl px-5 py-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl text-title">Piatti ({data.length})</h1>
         <div className="flex flex-wrap gap-2">
-        <button onClick={() => setImporting(true)} className="flex min-h-11 items-center gap-2 rounded-full border border-border/60 px-5 text-sm text-title">
-          <FileUp className="h-4 w-4" /> Importa da PDF
-        </button>
-        <button onClick={() => setEdit({ row: { ...empty, sort_order: (data.at(-1)?.sort_order ?? 0) + 1 }, isNew: true })} className="flex min-h-11 items-center gap-2 rounded-full bg-sage px-5 text-sm font-semibold text-sage-foreground">
-          <Plus className="h-4 w-4" /> Nuovo piatto
-        </button>
+          <button onClick={() => setImporting(true)} className="flex min-h-11 items-center gap-2 rounded-full border border-border/60 px-5 text-sm text-title">
+            <FileUp className="h-4 w-4" /> Importa da PDF
+          </button>
+          <button onClick={() => setEdit({ row: { ...empty, sort_order: (data.at(-1)?.sort_order ?? 0) + 1 }, isNew: true })} className="flex min-h-11 items-center gap-2 rounded-full bg-sage px-5 text-sm font-semibold text-sage-foreground">
+            <Plus className="h-4 w-4" /> Nuovo piatto
+          </button>
         </div>
       </div>
       {toCheck > 0 && (
@@ -151,14 +225,26 @@ function Editor() {
           <ul className="divide-y divide-border/30 rounded-lg border border-border/30 bg-card/60">
             {data.filter((r) => r.category === c.id).map((r) => (
               <li key={r.id} className={cn("flex items-center gap-3 p-3", !r.visible && "opacity-50")}>
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-surface-low">{r.image && <img src={r.image} alt="" className="h-full w-full object-cover" />}</div>
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-surface-low">
+                  {r.image && <img src={r.image} alt="" className="h-full w-full object-cover" />}
+                </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-title">{r.name_it}</p>
-                  <p className="text-xs text-muted-foreground">{formatPrice(Number(r.price), "it")}{!r.visible && " · Nascosto"}{!r.allergens_checked && <span className="text-destructive"> · Allergeni da verificare</span>}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatPrice(Number(r.price), "it")}
+                    {!r.visible && " · Nascosto"}
+                    {!r.allergens_checked && <span className="text-destructive"> · Allergeni da verificare</span>}
+                  </p>
                 </div>
-                <button aria-label={r.visible ? "Nascondi dal menu" : "Mostra nel menu"} title={r.visible ? "Nascondi dal menu" : "Mostra nel menu"} onClick={() => toggle(r)} className="grid h-10 w-10 place-items-center rounded-full border border-border/60 hover:text-sage">{r.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</button>
-                <button aria-label="Modifica" onClick={() => setEdit({ row: r, isNew: false })} className="grid h-10 w-10 place-items-center rounded-full border border-border/60 hover:text-sage"><Pencil className="h-4 w-4" /></button>
-                <button aria-label="Elimina" onClick={() => remove(r)} className="grid h-10 w-10 place-items-center rounded-full border border-border/60 text-destructive"><Trash2 className="h-4 w-4" /></button>
+                <button aria-label={r.visible ? "Nascondi dal menu" : "Mostra nel menu"} title={r.visible ? "Nascondi dal menu" : "Mostra nel menu"} onClick={() => toggle(r)} className="grid h-10 w-10 place-items-center rounded-full border border-border/60 hover:text-sage">
+                  {r.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                </button>
+                <button aria-label="Modifica" onClick={() => setEdit({ row: r, isNew: false })} className="grid h-10 w-10 place-items-center rounded-full border border-border/60 hover:text-sage">
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button aria-label="Elimina" onClick={() => remove(r)} className="grid h-10 w-10 place-items-center rounded-full border border-border/60 text-destructive">
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </li>
             ))}
           </ul>
@@ -173,33 +259,48 @@ const slug = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u
 function DishForm({ initial, isNew, onDone }: { initial: DishRow; isNew: boolean; onDone: () => void }) {
   const [r, setR] = useState(initial);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
   const set = <K extends keyof DishRow>(k: K, v: DishRow[K]) => setR((p) => ({ ...p, [k]: v }));
   const list = (v: string) => v.split(",").map((s) => s.trim()).filter(Boolean);
   const opt = (v: string) => (v.trim() ? v : null);
-  const [uploading, setUploading] = useState(false);
+
   const upload = async (file: File) => {
     setUploading(true);
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const path = `${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("dish-photos").upload(path, file, { contentType: file.type });
-    if (error) { setUploading(false); toast.error(error.message); return; }
+    if (error) { 
+      setUploading(false); 
+      toast.error(error.message); 
+      return; 
+    }
     const { data, error: e2 } = await supabase.storage.from("dish-photos").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
     setUploading(false);
-    if (e2 || !data) { toast.error(e2?.message ?? "Errore"); return; }
+    if (e2 || !data) { 
+      toast.error(e2?.message ?? "Errore"); 
+      return; 
+    }
     set("image", data.signedUrl);
     toast.success("Foto caricata — ricorda di salvare");
   };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!r.name_it.trim()) { toast.error("Inserisci il nome in italiano"); return; }
+    if (!r.name_it.trim()) { 
+      toast.error("Inserisci il nome in italiano"); 
+      return; 
+    }
     setBusy(true);
     const { updated_at: _u, ...payload } = { ...r, id: isNew ? slug(r.name_it) || crypto.randomUUID() : r.id };
     const { error } = isNew
       ? await supabase.from("dishes").insert(payload)
       : await supabase.from("dishes").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", r.id);
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { 
+      toast.error(error.message); 
+      return; 
+    }
     toast.success("Piatto salvato");
     onDone();
   };
@@ -207,10 +308,17 @@ function DishForm({ initial, isNew, onDone }: { initial: DishRow; isNew: boolean
   const pair = (label: string, it: keyof DishRow, en: keyof DishRow, area = false) => (
     <div className="grid gap-3 sm:grid-cols-2">
       {([["IT", it], ["EN", en]] as const).map(([l, k]) => (
-        <label key={l} className="block text-xs text-muted-foreground">{label} ({l})
-          {area
-            ? <textarea rows={3} className={cn(input, "mt-1")} value={(r[k] as string) ?? ""} onChange={(e) => set(k, e.target.value as never)} />
-            : <input className={cn(input, "mt-1")} value={(r[k] as string) ?? ""} onChange={(e) => set(k, (k.startsWith("signature") || k.startsWith("sommelier") ? opt(e.target.value) : e.target.value) as never)} />}
+        <label key={l} className="block text-xs text-muted-foreground">
+          {label} ({l})
+          {area ? (
+            <textarea rows={3} className={cn(input, "mt-1")} value={String(r[k] ?? "")} onChange={(e) => set(k, e.target.value as never)} />
+          ) : (
+            <input className={cn(input, "mt-1")} value={String(r[k] ?? "")} onChange={(e) => {
+              const val = e.target.value;
+              const formattedVal = k.startsWith("signature") || k.startsWith("sommelier") ? opt(val) : val;
+              set(k, formattedVal as never);
+            }} />
+          )}
         </label>
       ))}
     </div>
@@ -220,15 +328,18 @@ function DishForm({ initial, isNew, onDone }: { initial: DishRow; isNew: boolean
     <form onSubmit={save} className="mx-auto max-w-3xl space-y-5 px-5 py-8">
       <h1 className="font-display text-2xl text-title">{isNew ? "Nuovo piatto" : "Modifica piatto"}</h1>
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="block text-xs text-muted-foreground">Categoria
+        <label className="block text-xs text-muted-foreground">
+          Categoria
           <select className={cn(input, "mt-1")} value={r.category} onChange={(e) => set("category", e.target.value)}>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.label.it}</option>)}
           </select>
         </label>
-        <label className="block text-xs text-muted-foreground">Prezzo (€)
+        <label className="block text-xs text-muted-foreground">
+          Prezzo (€)
           <input type="number" step="0.5" min="0" className={cn(input, "mt-1")} value={r.price} onChange={(e) => set("price", Number(e.target.value))} />
         </label>
-        <label className="block text-xs text-muted-foreground">Ordine
+        <label className="block text-xs text-muted-foreground">
+          Ordine
           <input type="number" className={cn(input, "mt-1")} value={r.sort_order} onChange={(e) => set("sort_order", Number(e.target.value))} />
         </label>
       </div>
@@ -237,8 +348,9 @@ function DishForm({ initial, isNew, onDone }: { initial: DishRow; isNew: boolean
       {pair("Descrizione", "description_it", "description_en", true)}
       <div className="grid gap-3 sm:grid-cols-2">
         {(["it", "en"] as const).map((l) => (
-          <label key={l} className="block text-xs text-muted-foreground">Ingredienti ({l.toUpperCase()}, separati da virgola)
-            <input className={cn(input, "mt-1")} defaultValue={r[`ingredients_${l}`].join(", ")} onBlur={(e) => set(`ingredients_${l}`, list(e.target.value))} />
+          <label key={l} className="block text-xs text-muted-foreground">
+            Ingredienti ({l.toUpperCase()}, separati da virgola)
+            <input className={cn(input, "mt-1")} defaultValue={r[`ingredients_${l}`]?.join(", ") ?? ""} onBlur={(e) => set(`ingredients_${l}` as keyof DishRow, list(e.target.value) as never)} />
           </label>
         ))}
       </div>
@@ -246,9 +358,9 @@ function DishForm({ initial, isNew, onDone }: { initial: DishRow; isNew: boolean
         <legend className="mb-2 text-xs text-muted-foreground">Allergeni</legend>
         <div className="flex flex-wrap gap-2">
           {(Object.keys(allergenLabels) as AllergenId[]).map((a) => {
-            const on = r.allergens.includes(a);
+            const on = r.allergens?.includes(a);
             return (
-              <button type="button" key={a} onClick={() => set("allergens", on ? r.allergens.filter((x) => x !== a) : [...r.allergens, a])}
+              <button type="button" key={a} onClick={() => set("allergens", on ? r.allergens.filter((x: string) => x !== a) : [...(r.allergens || []), a])}
                 className={cn("min-h-9 rounded-full border px-3 text-xs", on ? "border-destructive bg-destructive/15 text-destructive" : "border-border/60 text-muted-foreground")}>
                 {allergenLabels[a].it}
               </button>
@@ -269,7 +381,9 @@ function DishForm({ initial, isNew, onDone }: { initial: DishRow; isNew: boolean
         </label>
       </fieldset>
       <div className="flex flex-wrap items-center gap-3">
-        <div className="h-20 w-20 shrink-0 overflow-hidden rounded bg-surface-low">{r.image && <img src={r.image} alt="" className="h-full w-full object-cover" />}</div>
+        <div className="h-20 w-20 shrink-0 overflow-hidden rounded bg-surface-low">
+          {r.image && <img src={r.image} alt="" className="h-full w-full object-cover" />}
+        </div>
         <label className={cn("flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border/60 px-5 text-sm text-title", uploading && "opacity-60")}>
           <Camera className="h-4 w-4" /> {uploading ? "Caricamento…" : "Carica foto"}
           <input type="file" accept="image/*" className="sr-only" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
@@ -280,7 +394,8 @@ function DishForm({ initial, isNew, onDone }: { initial: DishRow; isNew: boolean
         <input type="checkbox" checked={r.visible} onChange={(e) => set("visible", e.target.checked)} className="h-5 w-5 accent-sage" />
         Visibile nel menu
       </label>
-      <label className="block text-xs text-muted-foreground">Oppure indirizzo immagine (URL)
+      <label className="block text-xs text-muted-foreground">
+        Oppure indirizzo immagine (URL)
         <input className={cn(input, "mt-1")} value={r.image ?? ""} onChange={(e) => set("image", opt(e.target.value))} placeholder="https://…" />
       </label>
       <p className="border-t border-border/30 pt-4 text-xs uppercase tracking-widest text-muted-foreground">Abbinamento del sommelier (facoltativo)</p>
