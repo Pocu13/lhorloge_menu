@@ -361,13 +361,13 @@ export const allergenLabels: Record<AllergenId, T> = {
   uova: { it: "Uova", en: "Eggs" },
   fruttaGuscio: { it: "Frutta a guscio", en: "Tree nuts" },
   pesce: { it: "Pesce", en: "Fish" },
-  arachidi: { it: "Arachidi", en: "Peanuts" },
-  soia: { it: "Soia", en: "Soy" },
-  latte: { it: "Latte", en: "Milk" },
+  crostacei: { it: "Crostacei", en: "Crustaceans" },
   sedano: { it: "Sedano", en: "Celery" },
-  senape: { it: "Senape", en: "Mustard" },
-  sesamo: { it: "Sesamo", en: "Sesame" },
   solfiti: { it: "Solfiti", en: "Sulphites" },
+  soia: { it: "Soia", en: "Soy" },
+  senape: { it: "Senape", en: "Mustard" },
+  arachidi: { it: "Arachidi", en: "Peanuts" },
+  sesamo: { it: "Sesamo", en: "Sesame" },
   lupini: { it: "Lupini", en: "Lupin" },
   molluschi: { it: "Molluschi", en: "Molluscs" },
 };
@@ -407,7 +407,6 @@ export const allergenUi = {
 } satisfies Record<string, T>;
 
 export type DietId = "vegetarian" | "vegan" | "gluten_free";
-
 export const dietLabels: Record<DietId, T & { short: string }> = {
   vegetarian: { it: "Vegetariano", en: "Vegetarian", short: "V" },
   vegan: { it: "Vegano", en: "Vegan", short: "VG" },
@@ -416,7 +415,10 @@ export const dietLabels: Record<DietId, T & { short: string }> = {
 
 export const dietUi = {
   title: { it: "Preferenze alimentari", en: "Dietary preferences" },
-  count: (n: number) => ({ it: `${n} piatti`, en: `${n} dishes` }),
+  count: {
+    it: (n: number) => `${n} piatti`,
+    en: (n: number) => `${n} dishes`,
+  },
   empty: { it: "Nessun piatto corrisponde ai filtri scelti.", en: "No dishes match the selected filters." },
   sommelier: { it: "Consiglio del Sommelier", en: "Sommelier's Pairing" },
 };
