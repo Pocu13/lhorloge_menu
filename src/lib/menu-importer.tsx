@@ -43,15 +43,35 @@ export function MenuImporter({ nextOrder, onClose, onDone }: { nextOrder: number
     if (!rows) return;
     const chosen = rows.filter((r) => r.keep && r.name_it.trim());
     if (!chosen.length) { toast.error("Nessun piatto selezionato"); return; }
+    
     setSaving(true);
+    
+    // Payload mappato esattamente sui campi della tua tabella Supabase
     const payload = chosen.map(({ keep: _k, ...d }, i) => ({
-      ...d,
       id: `${slug(d.name_it)}-${crypto.randomUUID().slice(0, 4)}`,
-      tag_it: "", tag_en: "", image: null, sort_order: nextOrder + i,
-      visible: false, allergens_checked: false,
+      category: d.category,
+      name_it: d.name_it || "",
+      name_en: d.name_en || "",
+      tag_it: d.tag_it || "",
+      tag_en: d.tag_en || "",
+      description_it: d.description_it || "",
+      description_en: d.description_en || "",
+      ingredients_it: d.ingredients_it || [],
+      ingredients_en: d.ingredients_en || [],
+      allergens: d.allergens || [],
+      price: Number(d.price) || 0,
+      image: d.image || null,
+      is_vegetarian: Boolean(d.is_vegetarian),
+      is_vegan: Boolean(d.is_vegan),
+      is_gluten_free: Boolean(d.is_gluten_free),
+      sort_order: nextOrder + i,
+      visible: false,          // Inseriti come nascosti di default
+      allergens_checked: false // Traccia la verifica degli allergeni basata sul tuo schema
     }));
+
     const { error } = await supabase.from("dishes").insert(payload);
     setSaving(false);
+    
     if (error) { toast.error(error.message); return; }
     toast.success(`${payload.length} piatti importati — nascosti finché non verifichi gli allergeni`);
     onDone();
@@ -94,8 +114,8 @@ export function MenuImporter({ nextOrder, onClose, onDone }: { nextOrder: number
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {(Object.keys(allergenLabels) as AllergenId[]).map((a) => {
-                    const on = r.allergens.includes(a);
-                    return <button type="button" key={a} onClick={() => upd(i, { allergens: on ? r.allergens.filter((x) => x !== a) : [...r.allergens, a] })}
+                    const on = r.allergens?.includes(a);
+                    return <button type="button" key={a} onClick={() => upd(i, { allergens: on ? r.allergens.filter((x) => x !== a) : [...(r.allergens || []), a] })}
                       className={cn("min-h-8 rounded-full border px-2.5 text-xs", on ? "border-destructive bg-destructive/15 text-destructive" : "border-border/60 text-muted-foreground")}>{allergenLabels[a].it}</button>;
                   })}
                   {(Object.keys(dietLabels) as DietId[]).map((k) => (
