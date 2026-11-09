@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, Camera, Eye, EyeOff, FileUp, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
-import { MenuImporter } from "../components/menu-importer";
+import { MenuImporter } from "@/components/menu-importer";
 import { supabase } from "@/integrations/supabase/client";
 import { allDishesQuery, type DishRow } from "@/lib/menu-api";
 import { allergenLabels, categories, dietLabels, formatPrice, type AllergenId, type DietId } from "@/lib/menu-data";
