@@ -91,6 +91,8 @@ function Login() {
       toast.error("Credenziali non valide: " + error.message);
     } else {
       toast.success("Accesso effettuato con successo!");
+      // Ricarica la pagina per attivare immediatamente lo stato admin e mostrare l'editor
+      window.location.reload();
     }
   };
 
