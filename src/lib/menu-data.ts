@@ -386,6 +386,13 @@ export const dietLabels: Record<DietId, T> = {
   gluten_free: { it: "Senza glutine", en: "Gluten free" },
 };
 
+// Aggiunto per soddisfare le importazioni nei componenti delle rotte
+export const dietUi = {
+  title: { it: "Preferenze alimentari", en: "Dietary preferences" },
+  empty: { it: "Nessun piatto corrisponde ai filtri scelti.", en: "No dishes match the selected filters." },
+  sommelier: { it: "Consiglio del Sommelier", en: "Sommelier's Pairing" },
+};
+
 export const dishAllergens: Record<string, AllergenId[]> = {
   tagliere: ["glutine", "latte", "senape", "solfiti"],
   parmigiana: ["latte"],
