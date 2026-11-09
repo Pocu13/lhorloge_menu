@@ -418,4 +418,5 @@ export const dietUi = {
   count: { it: (n: number) => `${n} piatti`, en: (n: number) => `${n} dishes` },
   empty: { it: "Nessun piatto corrisponde ai filtri scelti.", en: "No dishes match the selected filters." },
   sommelier: { it: "Consiglio del Sommelier", en: "Sommelier's Pairing" },
-};[cite: 2]
+};
+```[cite: 2]
