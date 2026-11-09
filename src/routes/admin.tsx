@@ -10,9 +10,6 @@ import { allergenLabels, categories, dietLabels, formatPrice, type AllergenId, t
 import { ClockMark } from "@/components/menu-ui";
 import { cn } from "@/lib/utils";
 
-const ADMIN_EMAIL = "admin@admin.it";
-const toAuthPassword = (p: string) => `lh-admin-${p}`;
-
 export const Route = createFileRoute("/admin")({
   ssr: false,
   head: () => ({
@@ -80,28 +77,29 @@ function Login() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const u = user.trim().toLowerCase();
-    const email = u === "admin" ? ADMIN_EMAIL : u;
-    if (!email.includes("@")) { 
-      toast.error("Credenziali non valide"); 
+    const email = user.trim().toLowerCase();
+    if (!email || !email.includes("@")) { 
+      toast.error("Inserisci un'email valida"); 
       return; 
     }
     setBusy(true);
-    let { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    if (error) {
-      const res = await supabase.auth.signInWithPassword({ email, password: toAuthPassword(pass) });
-      error = res.error;
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
     setBusy(false);
-    if (error) toast.error("Credenziali non valide");
+    
+    if (error) {
+      console.error("Errore login:", error.message);
+      toast.error("Credenziali non valide: " + error.message);
+    } else {
+      toast.success("Accesso effettuato con successo!");
+    }
   };
 
   return (
     <form onSubmit={submit} className="mx-auto mt-16 max-w-sm space-y-4 rounded-lg border border-border/40 bg-card p-6">
       <h1 className="font-display text-2xl text-title">Accesso admin</h1>
       <label className="block text-sm text-muted-foreground">
-        Utente
-        <input className={cn(input, "mt-1")} value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" />
+        Email
+        <input className={cn(input, "mt-1")} value={user} onChange={(e) => setUser(e.target.value)} autoComplete="email" placeholder="admin@lhorloge.it" />
       </label>
       <label className="block text-sm text-muted-foreground">
         Password
