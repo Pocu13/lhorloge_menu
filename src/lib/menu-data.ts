@@ -60,7 +60,6 @@ export const ui = {
   hours: { it: "Aperti tutte le sere · 19:00 — 00:00", en: "Open every evening · 7 pm — midnight" },
 } satisfies Record<string, T>;
 
-/** EUR → USD indicative rate for the English interface. */
 export const USD_RATE = 1.08;
 
 export function formatPrice(eur: number, lang: Lang) {
@@ -296,4 +295,127 @@ export const dishes: Dish[] = [
     },
     ingredients: {
       it: ["Mascarpone", "Savoiardi", "Espresso", "Mandorle dell'Etna", "Cacao"],
-      en: ["
+      en: ["Mascarpone", "Ladyfingers", "Espresso", "Etna almonds", "Cocoa"],
+    },
+  }),
+  d({
+    id: "cannolo", category: "dolci", price: 6.5,
+    name: { it: "Cannolo Scomposto", en: "Deconstructed Cannolo" },
+    tag: { it: "Tradizione", en: "Tradition" },
+    description: {
+      it: "Cialda croccante, ricotta di pecora setacciata, scorza d'arancia candita e granella di pistacchio.",
+      en: "Crispy shell, sieved sheep's ricotta, candied orange peel and pistachio crumble.",
+    },
+    ingredients: {
+      it: ["Ricotta di pecora", "Cialda", "Arancia candita", "Pistacchio"],
+      en: ["Sheep's ricotta", "Shell", "Candied orange", "Pistachio"],
+    },
+  }),
+  d({
+    id: "etna-rosso", category: "bevande", price: 32,
+    name: { it: "Etna Rosso DOC Contrada", en: "Etna Rosso DOC Contrada" },
+    tag: { it: "Bottiglia 75cl", en: "75cl Bottle" },
+    description: {
+      it: "Nerello Mascalese in purezza, note di frutti rossi, spezie e roccia vulcanica.",
+      en: "Pure Nerello Mascalese, notes of red berries, spice and volcanic stone.",
+    },
+    ingredients: { it: ["Nerello Mascalese"], en: ["Nerello Mascalese"] },
+  }),
+  d({
+    id: "etna-bianco", category: "bevande", price: 30,
+    name: { it: "Etna Bianco Superiore", en: "Etna Bianco Superiore" },
+    tag: { it: "Bottiglia 75cl", en: "75cl Bottle" },
+    description: {
+      it: "Carricante dai versanti orientali dell'Etna, fresco, minerale e agrumato.",
+      en: "Carricante from Etna's eastern slopes, fresh, mineral and citrusy.",
+    },
+    ingredients: { it: ["Carricante"], en: ["Carricante"] },
+  }),
+  d({
+    id: "spritz", category: "bevande", price: 8,
+    name: { it: "Spritz all'Arancia Rossa", en: "Blood Orange Spritz" },
+    tag: { it: "Cocktail", en: "Cocktail" },
+    description: {
+      it: "Bitter siciliano, spremuta di arancia rossa di Sicilia IGP e bollicine etnee.",
+      en: "Sicilian bitter, IGP Sicilian blood orange juice and Etna bubbles.",
+    },
+    ingredients: { it: ["Bitter", "Arancia rossa", "Spumante"], en: ["Bitter", "Blood orange", "Sparkling wine"] },
+  }),
+  d({
+    id: "acqua", category: "bevande", price: 3,
+    name: { it: "Acqua Minerale", en: "Mineral Water" },
+    tag: { it: "75cl", en: "75cl" },
+    description: { it: "Naturale o frizzante.", en: "Still or sparkling." },
+    ingredients: { it: ["Acqua"], en: ["Water"] },
+  }),
+];
+
+export type AllergenId =
+  | "glutine" | "latte" | "uova" | "fruttaGuscio" | "pesce" | "crostacei"
+  | "sedano" | "solfiti" | "soia" | "senape"
+  | "arachidi" | "sesamo" | "lupini" | "molluschi";
+
+export const allergenLabels: Record<AllergenId, T> = {
+  glutine: { it: "Glutine", en: "Gluten" },
+  latte: { it: "Latte", en: "Milk" },
+  uova: { it: "Uova", en: "Eggs" },
+  fruttaGuscio: { it: "Frutta a guscio", en: "Tree nuts" },
+  pesce: { it: "Pesce", en: "Fish" },
+  crostacei: { it: "Crostacei", en: "Crustaceans" },
+  sedano: { it: "Sedano", en: "Celery" },
+  solfiti: { it: "Solfiti", en: "Sulphites" },
+  soia: { it: "Soia", en: "Soy" },
+  senape: { it: "Senape", en: "Mustard" },
+  arachidi: { it: "Arachidi", en: "Peanuts" },
+  sesamo: { it: "Sesamo", en: "Sesame" },
+  lupini: { it: "Lupini", en: "Lupin" },
+  molluschi: { it: "Molluschi", en: "Molluscs" },
+};
+
+export const dishAllergens: Record<string, AllergenId[]> = {
+  tagliere: ["glutine", "latte", "senape", "solfiti"],
+  parmigiana: ["latte"],
+  crostone: ["glutine", "latte", "pesce"],
+  potato: ["latte", "fruttaGuscio"],
+  caponatina: ["sedano", "solfiti"],
+  bruschette: ["glutine"],
+  norma: ["glutine", "latte"],
+  pizza: ["glutine", "latte", "fruttaGuscio"],
+  gnocchetti: ["glutine", "latte", "fruttaGuscio"],
+  spaghettone: ["glutine", "latte"],
+  paccheri: ["glutine", "solfiti"],
+  risotto: ["crostacei", "latte"],
+  ravioli: ["glutine", "uova", "latte", "fruttaGuscio"],
+  burger: ["glutine", "latte", "uova", "fruttaGuscio", "senape"],
+  filetto: ["latte", "solfiti"],
+  spada: ["pesce", "solfiti"],
+  tiramisu: ["glutine", "uova", "latte", "fruttaGuscio"],
+  cannolo: ["glutine", "latte", "fruttaGuscio"],
+  "etna-rosso": ["solfiti"],
+  "etna-bianco": ["solfiti"],
+  spritz: ["solfiti"],
+  acqua: [],
+};
+
+export const allergenUi = {
+  title: { it: "Allergeni", en: "Allergens" },
+  none: { it: "Nessun allergene", en: "No allergens" },
+  note: {
+    it: "Informazioni indicative: chiedi sempre conferma al personale.",
+    en: "Indicative information: always check with our staff.",
+  },
+} satisfies Record<string, T>;
+
+export type DietId = "is_vegetarian" | "is_vegan" | "is_gluten_free";
+export const dietLabels: Record<DietId, T & { short: string }> = {
+  is_vegetarian: { it: "Vegetariano", en: "Vegetarian", short: "V" },
+  is_vegan: { it: "Vegano", en: "Vegan", short: "VG" },
+  is_gluten_free: { it: "Senza Glutine", en: "Gluten Free", short: "GF" },
+};
+
+export const dietUi = {
+  title: { it: "Preferenze alimentari", en: "Dietary preferences" },
+  count: (n: number) => ({ it: `${n} piatti`, en: `${n} dishes` }),
+  empty: { it: "Nessun piatto corrisponde ai filtri scelti.", en: "No dishes match the selected filters." },
+  sommelier: { it: "Consiglio del Sommelier", en: "Sommelier's Pairing" },
+};
