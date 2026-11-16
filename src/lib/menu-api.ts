@@ -1,9 +1,12 @@
+
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import type { CategoryId, DietId, Dish, T } from "@/lib/menu-data";
 
 export type DishRow = Database["public"]["Tables"]["dishes"]["Row"];
+export type MenuRow = Database["public"]["Tables"]["menus"]["Row"];
+export type MenuDishRow = Database["public"]["Tables"]["menu_dishes"]["Row"];
 
 /**
  * Converts the image value stored in the database into a URL usable by the UI.
@@ -75,7 +78,79 @@ export function rowToDish(
   };
 }
 
-/** Public menu: only dishes marked visible. */
+/** Public list of active menus. */
+export const activeMenusQuery = queryOptions({
+  queryKey: ["menus", "active"],
+  queryFn: async (): Promise<MenuRow[]> => {
+    const { data, error } = await supabase
+      .from("menus")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order")
+      .order("name_it");
+
+    if (error) throw error;
+    return data ?? [];
+  },
+});
+
+/** Admin list: all menus, including inactive ones. */
+export const allMenusQuery = queryOptions({
+  queryKey: ["menus", "all"],
+  queryFn: async (): Promise<MenuRow[]> => {
+    const { data, error } = await supabase
+      .from("menus")
+      .select("*")
+      .order("sort_order")
+      .order("name_it");
+
+    if (error) throw error;
+    return data ?? [];
+  },
+});
+
+/**
+ * Public menu: only visible dishes assigned to the selected menu.
+ * The order configured in menu_dishes is preserved.
+ */
+export const menuDishesQuery = (menuId: string) =>
+  queryOptions({
+    queryKey: ["menu-dishes", menuId],
+    enabled: Boolean(menuId),
+    queryFn: async (): Promise<DishRow[]> => {
+      if (!menuId) return [];
+
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from("menu_dishes")
+        .select("dish_id, sort_order")
+        .eq("menu_id", menuId)
+        .order("sort_order");
+
+      if (assignmentsError) throw assignmentsError;
+
+      if (!assignments?.length) return [];
+
+      const dishIds = assignments.map((assignment) => assignment.dish_id);
+
+      const { data: dishes, error: dishesError } = await supabase
+        .from("dishes")
+        .select("*")
+        .in("id", dishIds)
+        .eq("visible", true);
+
+      if (dishesError) throw dishesError;
+
+      const dishesById = new Map(
+        (dishes ?? []).map((dish) => [dish.id, dish]),
+      );
+
+      return assignments
+        .map((assignment) => dishesById.get(assignment.dish_id))
+        .filter((dish): dish is DishRow => Boolean(dish));
+    },
+  });
+
+/** Public menu fallback: all dishes marked visible. */
 export const dishesQuery = queryOptions({
   queryKey: ["dishes", "public"],
   queryFn: async () => {
