@@ -18,7 +18,7 @@ export function ClockMark() {
     <img
       src="/logo.png"
       alt="L'Horloge"
-      className="h-10 w-10 object-contain transition-transform duration-500 group-hover:rotate-45"
+      className="h-16 w-16 object-contain"
     />
   );
 }
@@ -42,9 +42,8 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/30 bg-background/95 backdrop-blur-md">
       <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-5 sm:px-6">
-        <Link to="/" className="group flex items-center gap-3">
+        <Link to="/" className="flex items-center">
           <ClockMark />
-          <span className="font-display text-xl text-title sm:text-2xl">l'horloge</span>
         </Link>
         <div className="flex items-center gap-5">
           <div className="hidden items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground md:flex">
