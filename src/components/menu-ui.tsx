@@ -18,7 +18,7 @@ export function ClockMark() {
     <img
       src="/logo.png"
       alt="L'Horloge"
-      className="h-16 w-16 object-contain"
+      className="h-24 w-24 shrink-0 object-contain"
     />
   );
 }
@@ -41,7 +41,7 @@ export function SiteHeader() {
   const { lang, setLang } = useLang();
   return (
     <header className="sticky top-0 z-40 border-b border-border/30 bg-background/95 backdrop-blur-md">
-      <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-5 sm:px-6">
+      <div className="mx-auto flex h-28 max-w-6xl items-center justify-between px-5 sm:px-6">
         <Link to="/" className="flex items-center">
           <ClockMark />
         </Link>
