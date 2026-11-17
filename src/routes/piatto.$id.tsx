@@ -3,12 +3,9 @@ import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-rout
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  CheckCircle2,
-  Info,
   Leaf,
   Sprout,
   WheatOff,
-  Wine,
   Quote,
 } from "lucide-react";
 
@@ -109,8 +106,8 @@ function DishPage() {
     back: lang === "it" ? "Torna al menu" : "Back to menu",
     vr: "3D/VR",
     kitchenThought: lang === "it" ? "Pensiero di Cucina" : "Kitchen Notes",
-    ingredients: lang === "it" ? "Ingredienti Selezionati" : "Selected Ingredients",
-    allergens: lang === "it" ? "Allergeni & Tolleranze" : "Allergens & Intolerances",
+    ingredients: lang === "it" ? "Ingredienti" : "Ingredients",
+    allergens: lang === "it" ? "Allergeni" : "Allergens",
     regulation: "REG. UE 1169/11",
     cellar: lang === "it" ? "Dalla Cantina de L'Horloge" : "From L'Horloge Cellar",
     recommendedWine: lang === "it" ? "Vino Consigliato" : "Recommended Wine",
@@ -124,48 +121,35 @@ function DishPage() {
   return (
     <div className="min-h-screen bg-[#081616] font-sans text-[#D7E5E5] antialiased">
 
-      {/* HEADER FISSO */}
+      <main className="relative flex min-h-screen w-full flex-col bg-[#081616] pb-10">
 
-      <header className="fixed top-0 z-50 w-full bg-[#081616]/80 pt-[env(safe-area-inset-top)] shadow-[0_1px_8px_rgba(0,0,0,0.04)] backdrop-blur-xl">
-        <div className="flex h-16 items-center px-4">
+        {/* FOTO A TUTTO SCHERMO CON PULSANTE INDIETRO */}
+
+        <section className="relative h-[75svh] min-h-[520px] max-h-[850px] w-full overflow-hidden bg-[#041010]">
+
+          {d.image && (
+            <img
+              src={d.image}
+              alt={d.name[lang]}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+
+          <div className="absolute inset-0 bg-gradient-to-t from-[#081616] via-[#081616]/20 to-transparent" />
+
           <button
             type="button"
             onClick={back}
             aria-label={labels.back}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-[#152222]/70 text-[#D7E5E5] transition-colors hover:text-[#D8E9AC]"
+            className="absolute left-4 top-[calc(env(safe-area-inset-top)+16px)] z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#152222]/70 text-white shadow-lg backdrop-blur-md transition-colors hover:text-[#D8E9AC]"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-        </div>
-      </header>
 
-      <main className="relative flex min-h-screen w-full flex-col bg-[#081616] pb-10 pt-16">
-
-        {/* IMMAGINE HERO */}
-
-        <section className="flex w-full flex-col">
-          <div className="relative w-full overflow-hidden bg-[#041010]">
-            <div className="relative aspect-[4/3] max-h-[380px] w-full">
-
-              {d.image && (
-                <img
-                  src={d.image}
-                  alt={d.name[lang]}
-                  className="h-full w-full object-cover"
-                />
-              )}
-
-              <div className="absolute inset-0 bg-gradient-to-t from-[#081616] via-[#081616]/30 to-transparent" />
-
-              <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 rounded-full border border-[#45483d] bg-[#152222]/80 px-3 py-1.5 text-xs font-medium tracking-wide text-[#D8E9AC] shadow-lg backdrop-blur-md">
-                <span className="text-[#BDC D93]">
-                  <Wine className="h-4 w-4" />
-                </span>
-                <span>{labels.vr}</span>
-              </div>
-
-            </div>
+          <div className="absolute bottom-4 right-4 z-10 rounded-full border border-[#45483d] bg-[#152222]/80 px-3 py-1.5 text-xs font-medium tracking-wide text-[#D8E9AC] shadow-lg backdrop-blur-md">
+            {labels.vr}
           </div>
+
         </section>
 
         {/* TITOLO E PREZZO */}
@@ -174,7 +158,7 @@ function DishPage() {
 
           <div className="flex flex-col gap-1.5">
 
-            <span className="font-sans text-[11px] font-semibold uppercase tracking-widest text-[#BDC D93]">
+            <span className="font-sans text-[11px] font-semibold uppercase tracking-widest text-[#D8E9AC]">
               {category?.label[lang]}
               {d.tag[lang] ? ` • ${d.tag[lang]}` : ""}
             </span>
@@ -197,7 +181,7 @@ function DishPage() {
 
         <div className="flex flex-col gap-6 px-4 pb-6">
 
-          {/* SEZIONE 1 - RACCONTO DEL PIATTO */}
+          {/* RACCONTO DEL PIATTO */}
 
           <section className="flex flex-col gap-4 rounded-xl bg-[#111e1e] p-5 shadow-sm">
 
@@ -208,8 +192,8 @@ function DishPage() {
             {d.signature?.note[lang] && (
               <div className="flex flex-col gap-2 rounded-lg bg-[#152222] p-4 shadow-inner">
 
-                <div className="flex items-center gap-2 text-[#BDC D93]">
-                  <Quote className="h-5 w-5" />
+                <div className="flex items-center gap-2">
+                  <Quote className="h-5 w-5 text-[#D8E9AC]" />
                   <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#D8E9AC]">
                     {labels.kitchenThought}
                   </span>
@@ -224,15 +208,13 @@ function DishPage() {
 
           </section>
 
-          {/* SEZIONE 2 - INGREDIENTI */}
+          {/* INGREDIENTI */}
 
           <section className="flex flex-col gap-3 rounded-xl bg-[#111e1e] p-5 shadow-sm">
 
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg font-medium text-white">
-                {labels.ingredients}
-              </h2>
-            </div>
+            <h2 className="font-display text-lg font-medium text-white">
+              {labels.ingredients}
+            </h2>
 
             {ingredients.length > 0 ? (
               <ul className="flex flex-col gap-2 pt-1 font-sans text-xs text-[#C6C8B9]">
@@ -252,19 +234,15 @@ function DishPage() {
 
           </section>
 
-          {/* SEZIONE 3 - ALLERGENI */}
+          {/* ALLERGENI */}
 
           <section className="flex flex-col gap-3 rounded-xl bg-[#111e1e] p-5 shadow-sm">
 
             <div className="flex items-center justify-between gap-2">
 
-              <div className="flex items-center gap-2">
-                <Info className="h-5 w-5 text-[#BDC D93]" />
-
-                <h2 className="font-display text-lg font-medium text-white">
-                  {labels.allergens}
-                </h2>
-              </div>
+              <h2 className="font-display text-lg font-medium text-white">
+                {labels.allergens}
+              </h2>
 
               <span className="whitespace-nowrap rounded-full bg-[#1f2c2c] px-2 py-0.5 font-sans text-[10px] font-semibold tracking-[0.08em] text-[#C6C8B9]">
                 {labels.regulation}
@@ -299,7 +277,7 @@ function DishPage() {
               </p>
             )}
 
-            {/* CARATTERISTICHE ALIMENTARI DISPONIBILI */}
+            {/* CARATTERISTICHE ALIMENTARI */}
 
             {diets.length > 0 && (
               <div className="flex flex-wrap items-center justify-around gap-3 pt-1 text-center">
@@ -323,27 +301,19 @@ function DishPage() {
 
           </section>
 
-          {/* SEZIONE 4 - CANTINA */}
+          {/* CANTINA */}
 
           {wineName && (
             <section className="flex flex-col gap-3 rounded-xl bg-[#111e1e] p-5 shadow-sm">
 
-              <div className="flex items-center justify-between">
-
-                <div className="flex items-center gap-2">
-                  <Wine className="h-5 w-5 text-[#D8E9AC]" />
-
-                  <h2 className="font-display text-lg font-medium text-white">
-                    {labels.cellar}
-                  </h2>
-                </div>
-
-              </div>
+              <h2 className="font-display text-lg font-medium text-white">
+                {labels.cellar}
+              </h2>
 
               <div className="flex flex-col gap-3 rounded-lg bg-[#152222] p-3.5">
 
                 <div className="flex flex-col">
-                  <span className="font-sans text-xs uppercase tracking-wider text-[#BDC D93]">
+                  <span className="font-sans text-xs uppercase tracking-wider text-[#C6C8B9]">
                     {labels.recommendedWine}
                   </span>
 
@@ -362,8 +332,6 @@ function DishPage() {
 
             </section>
           )}
-
-          {/* CHIUSURA */}
 
           <div className="flex flex-col items-center justify-center gap-1 py-2 text-center">
             <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-[#909285]">
