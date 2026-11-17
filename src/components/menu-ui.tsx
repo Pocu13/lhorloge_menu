@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Leaf, Sprout, WheatOff } from "lucide-react";
@@ -14,16 +15,11 @@ export const useLang = () => useContext(LangCtx);
 
 export function ClockMark() {
   return (
-    <svg viewBox="0 0 40 40" className="h-10 w-10 text-title transition-transform duration-500 group-hover:rotate-45" fill="none" stroke="currentColor">
-      <circle cx="20" cy="20" r="18.5" strokeWidth="1" />
-      <circle cx="20" cy="20" r="15" strokeWidth="0.5" opacity="0.6" />
-      {Array.from({ length: 12 }).map((_, i) => (
-        <line key={i} x1="20" y1="6.5" x2="20" y2={i % 3 === 0 ? "9" : "7.8"} strokeWidth="0.8" transform={`rotate(${i * 30} 20 20)`} />
-      ))}
-      <line x1="20" y1="20" x2="20" y2="11" strokeWidth="1.2" strokeLinecap="round" />
-      <line x1="20" y1="20" x2="26" y2="23" strokeWidth="1.2" strokeLinecap="round" />
-      <circle cx="20" cy="20" r="1.2" fill="currentColor" />
-    </svg>
+    <img
+      src="/logo.png"
+      alt="L'Horloge"
+      className="h-10 w-10 object-contain transition-transform duration-500 group-hover:rotate-45"
+    />
   );
 }
 
