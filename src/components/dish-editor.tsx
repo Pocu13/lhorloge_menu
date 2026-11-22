@@ -635,9 +635,9 @@ export function DishEditor({
 
       {/* MODALE AGGIUNGI INGREDIENTE */}
       {ingredientModal && (
-        <div className="fixed inset-0 z-[80] flex flex-col bg-[#081616]">
-          <header className="border-b border-white/10 bg-[#111E1E] pt-[env(safe-area-inset-top)]">
-            <div className="mx-auto flex h-16 max-w-lg items-center justify-between px-4">
+        <div className="fixed inset-0 z-[80] flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#081616]">
+          <header className="z-10 shrink-0 border-b border-white/10 bg-[#111E1E] pt-[env(safe-area-inset-top)]">
+            <div className="mx-auto flex min-h-16 max-w-lg items-center justify-between gap-3 px-5 py-3">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -661,112 +661,114 @@ export function DishEditor({
             </div>
           </header>
 
-          <div className="mx-auto w-full max-w-lg flex-1 space-y-4 overflow-y-auto px-4 py-5">
-            <label>
-              <span className={label}>Cerca o Inserisci Materia Prima</span>
-              <input
-                autoFocus
-                className={input}
-                value={ingredientName}
-                onChange={(event) => setIngredientName(event.target.value)}
-                placeholder="es. Pistacchio Verde di Bronte DOP"
-              />
-            </label>
-
-            <label>
-              <span className={label}>Categoria Distinta Base</span>
-              <select
-                className={input}
-                value={ingredientCategory}
-                onChange={(event) => setIngredientCategory(event.target.value)}
-              >
-                {ingredientCategories.map((category) => (
-                  <option key={category}>{category}</option>
-                ))}
-              </select>
-            </label>
-
-            <div className="grid grid-cols-2 gap-3">
-              <label>
-                <span className={label}>Dosaggio / Grammi</span>
+          <div className="mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-5 py-6">
+            <div className="space-y-7 pb-6">
+              <label className="block">
+                <span className={label}>Cerca o Inserisci Materia Prima</span>
                 <input
-                  className={input}
-                  value={ingredientDosage}
-                  onChange={(event) => setIngredientDosage(event.target.value)}
-                  placeholder="es. 50 g"
+                  autoFocus
+                  className={`${input} min-h-12`}
+                  value={ingredientName}
+                  onChange={(event) => setIngredientName(event.target.value)}
+                  placeholder="es. Pistacchio Verde di Bronte DOP"
                 />
               </label>
-              <label>
-                <span className={label}>Provenienza / Territorio</span>
-                <input
-                  className={input}
-                  value={ingredientOrigin}
-                  onChange={(event) => setIngredientOrigin(event.target.value)}
-                  placeholder="es. Sicilia / Etna"
-                />
+
+              <label className="block">
+                <span className={label}>Categoria Distinta Base</span>
+                <select
+                  className={`${input} min-h-12`}
+                  value={ingredientCategory}
+                  onChange={(event) => setIngredientCategory(event.target.value)}
+                >
+                  {ingredientCategories.map((category) => (
+                    <option key={category}>{category}</option>
+                  ))}
+                </select>
               </label>
-            </div>
 
-            <label>
-              <span className={label}>Presidio / Certificazione</span>
-              <select
-                className={input}
-                value={ingredientCertification}
-                onChange={(event) => setIngredientCertification(event.target.value)}
-              >
-                {certifications.map((certification) => (
-                  <option key={certification}>{certification}</option>
-                ))}
-              </select>
-            </label>
-
-            <div>
-              <span className={label}>Allergeni Noti Associati</span>
-              <div className="grid grid-cols-2 gap-2">
-                {allergens.map((item) => (
-                  <label
-                    key={item.id}
-                    className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#152222] px-3 py-3 text-xs text-white"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={ingredientAllergens.includes(item.id)}
-                      onChange={() =>
-                        setIngredientAllergens((current) =>
-                          current.includes(item.id)
-                            ? current.filter((id) => id !== item.id)
-                            : [...current, item.id],
-                        )
-                      }
-                      className="accent-[#D8E9AC]"
-                    />
-                    {item.name}
-                  </label>
-                ))}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block min-w-0">
+                  <span className={label}>Dosaggio / Grammi</span>
+                  <input
+                    className={`${input} min-h-12`}
+                    value={ingredientDosage}
+                    onChange={(event) => setIngredientDosage(event.target.value)}
+                    placeholder="es. 50 g"
+                  />
+                </label>
+                <label className="block min-w-0">
+                  <span className={label}>Provenienza / Territorio</span>
+                  <input
+                    className={`${input} min-h-12`}
+                    value={ingredientOrigin}
+                    onChange={(event) => setIngredientOrigin(event.target.value)}
+                    placeholder="es. Sicilia / Etna"
+                  />
+                </label>
               </div>
-            </div>
 
-            <p className="rounded-lg border border-[#D8E9AC]/15 bg-[#152222] p-3 text-[10px] leading-relaxed text-[#999999]">
-              In questa versione vengono salvati il nome dell'ingrediente e gli allergeni associati. Categoria, dosaggio, provenienza e certificazione resteranno temporanei finché non saranno aggiunti i relativi campi al database.
-            </p>
+              <label className="block">
+                <span className={label}>Presidio / Certificazione</span>
+                <select
+                  className={`${input} min-h-12`}
+                  value={ingredientCertification}
+                  onChange={(event) => setIngredientCertification(event.target.value)}
+                >
+                  {certifications.map((certification) => (
+                    <option key={certification}>{certification}</option>
+                  ))}
+                </select>
+              </label>
+
+              <div>
+                <span className={label}>Allergeni Noti Associati</span>
+                <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
+                  {allergens.map((item) => (
+                    <label
+                      key={item.id}
+                      className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-white/[0.07] bg-[#152222] px-3 py-3 text-xs text-white"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={ingredientAllergens.includes(item.id)}
+                        onChange={() =>
+                          setIngredientAllergens((current) =>
+                            current.includes(item.id)
+                              ? current.filter((id) => id !== item.id)
+                              : [...current, item.id],
+                          )
+                        }
+                        className="h-4 w-4 shrink-0 accent-[#D8E9AC]"
+                      />
+                      <span className="min-w-0 leading-snug">{item.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <p className="rounded-lg border border-[#D8E9AC]/15 bg-[#152222] p-4 text-[11px] leading-relaxed text-[#999999]">
+                In questa versione vengono salvati il nome dell'ingrediente e gli allergeni associati. Categoria, dosaggio, provenienza e certificazione resteranno temporanei finché non saranno aggiunti i relativi campi al database.
+              </p>
+            </div>
           </div>
 
-          <footer className="border-t border-white/10 bg-[#111E1E] p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-            <div className="mx-auto flex max-w-lg gap-3">
+          <footer className="z-10 shrink-0 border-t border-white/10 bg-[#111E1E] px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4">
+            <div className="mx-auto grid max-w-lg grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setIngredientModal(false)}
-                className={`${buttonSecondary} flex-1`}
+                className={`${buttonSecondary} min-w-0`}
               >
                 Annulla
               </button>
               <button
                 type="button"
                 onClick={addIngredient}
-                className={`${buttonPrimary} flex-[1.4]`}
+                className={`${buttonPrimary} min-w-0 px-3`}
               >
                 <Plus size={16} />
-                Aggiungi alla Distinta
+                <span className="truncate">Aggiungi</span>
               </button>
             </div>
           </footer>
