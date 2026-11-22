@@ -661,13 +661,12 @@ export function DishEditor({
             </div>
           </header>
 
-          <div className="mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-5 py-6">
-            <div className="space-y-7 pb-6">
+          <div className="mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-5 sm:py-6">
+            <div className="space-y-6 pb-6">
               <label className="block">
                 <span className={label}>Cerca o Inserisci Materia Prima</span>
                 <input
-                  autoFocus
-                  className={`${input} min-h-12`}
+                  className={`${input} min-h-12 text-base`}
                   value={ingredientName}
                   onChange={(event) => setIngredientName(event.target.value)}
                   placeholder="es. Pistacchio Verde di Bronte DOP"
@@ -677,7 +676,7 @@ export function DishEditor({
               <label className="block">
                 <span className={label}>Categoria Distinta Base</span>
                 <select
-                  className={`${input} min-h-12`}
+                  className={`${input} min-h-12 text-base`}
                   value={ingredientCategory}
                   onChange={(event) => setIngredientCategory(event.target.value)}
                 >
@@ -691,7 +690,7 @@ export function DishEditor({
                 <label className="block min-w-0">
                   <span className={label}>Dosaggio / Grammi</span>
                   <input
-                    className={`${input} min-h-12`}
+                    className={`${input} min-h-12 text-base`}
                     value={ingredientDosage}
                     onChange={(event) => setIngredientDosage(event.target.value)}
                     placeholder="es. 50 g"
@@ -700,7 +699,7 @@ export function DishEditor({
                 <label className="block min-w-0">
                   <span className={label}>Provenienza / Territorio</span>
                   <input
-                    className={`${input} min-h-12`}
+                    className={`${input} min-h-12 text-base`}
                     value={ingredientOrigin}
                     onChange={(event) => setIngredientOrigin(event.target.value)}
                     placeholder="es. Sicilia / Etna"
@@ -711,7 +710,7 @@ export function DishEditor({
               <label className="block">
                 <span className={label}>Presidio / Certificazione</span>
                 <select
-                  className={`${input} min-h-12`}
+                  className={`${input} min-h-12 text-base`}
                   value={ingredientCertification}
                   onChange={(event) => setIngredientCertification(event.target.value)}
                 >
@@ -723,7 +722,7 @@ export function DishEditor({
 
               <div>
                 <span className={label}>Allergeni Noti Associati</span>
-                <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {allergens.map((item) => (
                     <label
                       key={item.id}
