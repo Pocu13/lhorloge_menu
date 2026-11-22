@@ -2,7 +2,19 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, Pencil, Plus, Trash2, UtensilsCrossed } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  CirclePlus,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  UtensilsCrossed,
+  X,
+} from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { allDishesQuery, type DishRow } from "@/lib/menu-api";
 import type { Database } from "@/integrations/supabase/types";
@@ -11,7 +23,13 @@ import { cn } from "@/lib/utils";
 type MenuRow = Database["public"]["Tables"]["menus"]["Row"];
 
 const input =
-  "w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground focus:border-sage focus:outline-none";
+  "mt-1 w-full rounded-xl border border-white/10 bg-[#132726] px-3.5 py-3 text-sm text-[#EEEEEE] placeholder:text-[#999999] outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
+
+const primaryButton =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#D8E9AC] px-5 text-xs font-bold uppercase tracking-wider text-[#0B1818] transition active:scale-[0.98] disabled:opacity-50";
+
+const secondaryButton =
+  "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#152222] px-4 text-xs font-semibold text-[#D7E5E5] transition hover:border-[#D8E9AC] active:scale-[0.98]";
 
 const makeSlug = (value: string) =>
   value
@@ -43,6 +61,7 @@ function AdminMenus() {
 
   const [selectedId, setSelectedId] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+
   const [nameIt, setNameIt] = useState("");
   const [nameEn, setNameEn] = useState("");
   const [descriptionIt, setDescriptionIt] = useState("");
@@ -50,8 +69,11 @@ function AdminMenus() {
   const [slug, setSlug] = useState("");
   const [sortOrder, setSortOrder] = useState(0);
   const [isActive, setIsActive] = useState(true);
+
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [showAssignments, setShowAssignments] = useState(true);
 
   const selectedMenu = menus.find((menu) => menu.id === selectedId);
 
@@ -86,10 +108,12 @@ function AdminMenus() {
     setSlug("");
     setSortOrder(menus.length);
     setIsActive(true);
+    setShowForm(false);
   };
 
   const startNew = () => {
     resetForm();
+    setShowForm(true);
   };
 
   const startEdit = (menu: MenuRow) => {
@@ -101,6 +125,13 @@ function AdminMenus() {
     setSlug(menu.slug);
     setSortOrder(menu.sort_order);
     setIsActive(menu.is_active);
+    setShowForm(true);
+  };
+
+  const refreshMenus = async () => {
+    await qc.invalidateQueries({ queryKey: ["menus"] });
+    await qc.invalidateQueries({ queryKey: ["menus", "admin"] });
+    await qc.invalidateQueries({ queryKey: ["menus", "active"] });
   };
 
   const saveMenu = async (e: React.FormEvent) => {
@@ -145,9 +176,7 @@ function AdminMenus() {
     toast.success(editingId ? "Menu aggiornato" : "Menu creato");
     resetForm();
 
-    await qc.invalidateQueries({ queryKey: ["menus"] });
-    await qc.invalidateQueries({ queryKey: ["menus", "admin"] });
-    await qc.invalidateQueries({ queryKey: ["menus", "active"] });
+    await refreshMenus();
   };
 
   const toggleActive = async (menu: MenuRow) => {
@@ -168,9 +197,7 @@ function AdminMenus() {
       menu.is_active ? "Menu disattivato" : "Menu attivato",
     );
 
-    await qc.invalidateQueries({ queryKey: ["menus"] });
-    await qc.invalidateQueries({ queryKey: ["menus", "admin"] });
-    await qc.invalidateQueries({ queryKey: ["menus", "active"] });
+    await refreshMenus();
   };
 
   const deleteMenu = async (menu: MenuRow) => {
@@ -212,9 +239,7 @@ function AdminMenus() {
 
     toast.success("Menu eliminato");
 
-    await qc.invalidateQueries({ queryKey: ["menus"] });
-    await qc.invalidateQueries({ queryKey: ["menus", "admin"] });
-    await qc.invalidateQueries({ queryKey: ["menus", "active"] });
+    await refreshMenus();
     await qc.invalidateQueries({ queryKey: ["menu-assignments"] });
   };
 
@@ -272,332 +297,490 @@ function AdminMenus() {
     );
   });
 
+  const activeCount = menus.filter((menu) => menu.is_active).length;
+
   if (menusLoading) {
-    return <p className="py-10 text-center text-muted-foreground">Caricamento menu…</p>;
+    return (
+      <div className="rounded-2xl bg-[#111E1E] px-5 py-12 text-center text-sm text-[#999999]">
+        Caricamento menu…
+      </div>
+    );
   }
 
   return (
-    <section className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-display text-2xl text-title">
-            Gestione menu
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Crea più menu e scegli quali piatti includere in ciascuno.
-          </p>
-        </div>
+    <section className="space-y-6 text-[#D7E5E5]">
 
-        <button
-          type="button"
-          onClick={startNew}
-          className="flex min-h-11 items-center gap-2 rounded-full bg-sage px-5 text-sm font-semibold text-sage-foreground"
-        >
-          <Plus className="h-4 w-4" />
-          Nuovo menu
-        </button>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <div className="space-y-3">
-          <h3 className="font-display text-lg text-title">
-            Menu esistenti ({menus.length})
-          </h3>
-
-          {menus.length === 0 && (
-            <p className="rounded-lg border border-border/40 p-5 text-sm text-muted-foreground">
-              Non ci sono menu. Creane uno per iniziare.
+      {/* Riepilogo */}
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-2xl font-semibold text-white">
+              Gestione Menù
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-[#B5CBC9]">
+              Organizza le carte e scegli i piatti da proporre ai clienti.
             </p>
-          )}
+          </div>
 
-          {menus.map((menu) => (
-            <div
-              key={menu.id}
-              className={cn(
-                "rounded-lg border p-4 transition-colors",
-                selectedId === menu.id
-                  ? "border-sage bg-sage/5"
-                  : "border-border/40 bg-card/50",
-              )}
-            >
-              <div className="flex items-start gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(menu.id)}
-                  className="min-w-0 flex-1 text-left"
-                >
-                  <span className="block font-medium text-title">
-                    {menu.name_it}
-                  </span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {menu.name_en}
-                  </span>
-                  <span
-                    className={cn(
-                      "mt-2 inline-block rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider",
-                      menu.is_active
-                        ? "bg-sage/15 text-sage"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {menu.is_active ? "Attivo" : "Disattivato"}
-                  </span>
-                  {selectedId === menu.id && (
-                    <span className="ml-2 text-xs text-sage">
-                      Selezionato
-                    </span>
-                  )}
-                </button>
-
-                <div className="flex shrink-0 gap-1">
-                  <button
-                    type="button"
-                    title="Modifica menu"
-                    aria-label="Modifica menu"
-                    onClick={() => startEdit(menu)}
-                    className="grid h-9 w-9 place-items-center rounded-full border border-border/60 hover:text-sage"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    title={menu.is_active ? "Disattiva menu" : "Attiva menu"}
-                    aria-label={menu.is_active ? "Disattiva menu" : "Attiva menu"}
-                    onClick={() => toggleActive(menu)}
-                    className="grid h-9 w-9 place-items-center rounded-full border border-border/60 text-sm hover:text-sage"
-                  >
-                    {menu.is_active ? "ON" : "OFF"}
-                  </button>
-
-                  <button
-                    type="button"
-                    title="Elimina menu"
-                    aria-label="Elimina menu"
-                    onClick={() => deleteMenu(menu)}
-                    className="grid h-9 w-9 place-items-center rounded-full border border-border/60 text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+          <button
+            type="button"
+            onClick={startNew}
+            className={cn(primaryButton, "shrink-0")}
+          >
+            <Plus className="h-4 w-4" />
+            Nuovo
+          </button>
         </div>
 
-        <div className="space-y-5">
-          <form
-            onSubmit={saveMenu}
-            className="space-y-4 rounded-lg border border-border/40 bg-card/50 p-5"
-          >
-            <h3 className="font-display text-lg text-title">
-              {editingId ? "Modifica menu" : "Crea un menu"}
-            </h3>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-[#111E1E] p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#999999]">
+              Menu totali
+            </p>
+            <p className="mt-2 font-display text-3xl text-white">
+              {menus.length}
+            </p>
+          </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-xs text-muted-foreground">
-                Nome italiano *
-                <input
-                  className={cn(input, "mt-1")}
-                  value={nameIt}
-                  onChange={(e) => {
-                    setNameIt(e.target.value);
-                    if (!editingId) setSlug(makeSlug(e.target.value));
-                  }}
-                  placeholder="Menu principale"
-                  required
-                />
-              </label>
-
-              <label className="block text-xs text-muted-foreground">
-                Nome inglese *
-                <input
-                  className={cn(input, "mt-1")}
-                  value={nameEn}
-                  onChange={(e) => setNameEn(e.target.value)}
-                  placeholder="Main menu"
-                  required
-                />
-              </label>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-xs text-muted-foreground">
-                Descrizione italiana
-                <textarea
-                  rows={3}
-                  className={cn(input, "mt-1")}
-                  value={descriptionIt}
-                  onChange={(e) => setDescriptionIt(e.target.value)}
-                />
-              </label>
-
-              <label className="block text-xs text-muted-foreground">
-                Descrizione inglese
-                <textarea
-                  rows={3}
-                  className={cn(input, "mt-1")}
-                  value={descriptionEn}
-                  onChange={(e) => setDescriptionEn(e.target.value)}
-                />
-              </label>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-xs text-muted-foreground">
-                Identificativo URL
-                <input
-                  className={cn(input, "mt-1")}
-                  value={slug}
-                  onChange={(e) => setSlug(makeSlug(e.target.value))}
-                  placeholder="menu-principale"
-                  required
-                />
-              </label>
-
-              <label className="block text-xs text-muted-foreground">
-                Ordine
-                <input
-                  type="number"
-                  className={cn(input, "mt-1")}
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(Number(e.target.value))}
-                />
-              </label>
-            </div>
-
-            <label className="flex items-center gap-2 text-sm text-title">
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="h-5 w-5 accent-sage"
-              />
-              Menu attivo e visibile ai clienti
-            </label>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="submit"
-                disabled={busy}
-                className="min-h-11 rounded-full bg-sage px-6 text-sm font-semibold text-sage-foreground disabled:opacity-60"
-              >
-                {busy
-                  ? "Salvataggio…"
-                  : editingId
-                    ? "Salva modifiche"
-                    : "Crea menu"}
-              </button>
-
-              {editingId && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="min-h-11 rounded-full border border-border/60 px-5 text-sm text-title"
-                >
-                  Annulla
-                </button>
-              )}
-            </div>
-          </form>
-
-          <div className="rounded-lg border border-border/40 bg-card/50 p-5">
-            <div className="mb-4 flex items-center gap-2">
-              <UtensilsCrossed className="h-5 w-5 text-sage" />
-              <h3 className="font-display text-lg text-title">
-                Associazione piatti
-              </h3>
-            </div>
-
-            {!selectedMenu ? (
-              <p className="text-sm text-muted-foreground">
-                Seleziona un menu dalla lista per gestire i suoi piatti.
-              </p>
-            ) : (
-              <>
-                <p className="mb-3 text-sm text-muted-foreground">
-                  Selezionato: <strong className="text-title">{selectedMenu.name_it}</strong>
-                </p>
-
-                <p className="mb-4 text-xs text-muted-foreground">
-                  Seleziona i piatti da includere. Lo stesso piatto può
-                  appartenere a più menu.
-                </p>
-
-                <input
-                  className={cn(input, "mb-3")}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cerca un piatto…"
-                />
-
-                {dishesLoading || assignmentsLoading ? (
-                  <p className="py-5 text-sm text-muted-foreground">
-                    Caricamento piatti…
-                  </p>
-                ) : (
-                  <>
-                    <p className="mb-3 text-xs text-muted-foreground">
-                      {assignments.length} piatti assegnati
-                    </p>
-
-                    <div className="max-h-[480px] space-y-1 overflow-y-auto">
-                      {filteredDishes.map((dish) => {
-                        const checked = assignedIds.has(dish.id);
-
-                        return (
-                          <label
-                            key={dish.id}
-                            className="flex cursor-pointer items-center gap-3 rounded-md border border-transparent p-2.5 transition-colors hover:border-border/50 hover:bg-background/60"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleDish(dish)}
-                              className="h-5 w-5 shrink-0 accent-sage"
-                            />
-
-                            {dish.image ? (
-                              <img
-                                src={dish.image}
-                                alt=""
-                                className="h-10 w-10 shrink-0 rounded object-cover"
-                              />
-                            ) : (
-                              <div className="grid h-10 w-10 shrink-0 place-items-center rounded bg-surface-low text-sage">
-                                <UtensilsCrossed className="h-4 w-4" />
-                              </div>
-                            )}
-
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm text-title">
-                                {dish.name_it}
-                              </span>
-                              <span className="block truncate text-xs text-muted-foreground">
-                                {dish.name_en}
-                              </span>
-                            </span>
-
-                            {checked && (
-                              <Check className="h-4 w-4 shrink-0 text-sage" />
-                            )}
-                          </label>
-                        );
-                      })}
-
-                      {filteredDishes.length === 0 && (
-                        <p className="py-5 text-center text-sm text-muted-foreground">
-                          Nessun piatto trovato.
-                        </p>
-                      )}
-                    </div>
-                  </>
-                )}
-              </>
-            )}
+          <div className="rounded-2xl bg-[#111E1E] p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#999999]">
+              Menu attivi
+            </p>
+            <p className="mt-2 font-display text-3xl text-[#D8E9AC]">
+              {activeCount}
+            </p>
           </div>
         </div>
       </div>
+
+      {/* Creazione e modifica */}
+      {showForm && (
+        <form
+          onSubmit={saveMenu}
+          className="space-y-4 rounded-2xl border border-[#D8E9AC]/20 bg-[#111E1E] p-4 sm:p-5"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#D8E9AC]">
+                Configurazione
+              </p>
+              <h3 className="mt-1 font-display text-xl text-white">
+                {editingId ? "Modifica Menù" : "Nuovo Menù"}
+              </h3>
+            </div>
+
+            <button
+              type="button"
+              onClick={resetForm}
+              aria-label="Chiudi modulo"
+              className="grid h-9 w-9 place-items-center rounded-full bg-[#152222] text-[#B5CBC9]"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-[11px] text-[#B5CBC9]">
+              Nome italiano *
+              <input
+                className={input}
+                value={nameIt}
+                onChange={(e) => {
+                  setNameIt(e.target.value);
+                  if (!editingId) setSlug(makeSlug(e.target.value));
+                }}
+                placeholder="Menu principale"
+                required
+              />
+            </label>
+
+            <label className="block text-[11px] text-[#B5CBC9]">
+              Nome inglese *
+              <input
+                className={input}
+                value={nameEn}
+                onChange={(e) => setNameEn(e.target.value)}
+                placeholder="Main menu"
+                required
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-[11px] text-[#B5CBC9]">
+              Descrizione italiana
+              <textarea
+                rows={3}
+                className={input}
+                value={descriptionIt}
+                onChange={(e) => setDescriptionIt(e.target.value)}
+              />
+            </label>
+
+            <label className="block text-[11px] text-[#B5CBC9]">
+              Descrizione inglese
+              <textarea
+                rows={3}
+                className={input}
+                value={descriptionEn}
+                onChange={(e) => setDescriptionEn(e.target.value)}
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-[11px] text-[#B5CBC9]">
+              Identificativo URL
+              <input
+                className={input}
+                value={slug}
+                onChange={(e) => setSlug(makeSlug(e.target.value))}
+                placeholder="menu-principale"
+                required
+              />
+            </label>
+
+            <label className="block text-[11px] text-[#B5CBC9]">
+              Ordine di visualizzazione
+              <input
+                type="number"
+                className={input}
+                value={sortOrder}
+                onChange={(e) => setSortOrder(Number(e.target.value))}
+              />
+            </label>
+          </div>
+
+          <label className="flex items-center justify-between gap-3 rounded-xl bg-[#152222] p-3">
+            <span>
+              <span className="block text-xs font-semibold text-white">
+                Menu attivo
+              </span>
+              <span className="mt-1 block text-[10px] text-[#999999]">
+                Visibile ai clienti nel menu pubblico.
+              </span>
+            </span>
+
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="h-5 w-5 accent-[#D8E9AC]"
+            />
+          </label>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={resetForm}
+              className={secondaryButton}
+            >
+              Annulla
+            </button>
+
+            <button
+              type="submit"
+              disabled={busy}
+              className={primaryButton}
+            >
+              <Check className="h-4 w-4" />
+              {busy
+                ? "Salvataggio…"
+                : editingId
+                  ? "Salva modifiche"
+                  : "Crea menù"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Elenco menu */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-lg text-white">
+            I tuoi Menù
+          </h3>
+          <span className="rounded-full bg-[#152222] px-3 py-1 text-[10px] font-bold text-[#D8E9AC]">
+            {menus.length} configurati
+          </span>
+        </div>
+
+        {menus.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-[#111E1E] px-5 py-10 text-center">
+            <UtensilsCrossed className="mx-auto h-8 w-8 text-[#D8E9AC]" />
+            <p className="mt-3 text-sm font-semibold text-white">
+              Nessun menù configurato
+            </p>
+            <p className="mt-1 text-xs text-[#999999]">
+              Crea il tuo primo menù per iniziare.
+            </p>
+            <button
+              type="button"
+              onClick={startNew}
+              className={cn(primaryButton, "mt-5")}
+            >
+              <Plus className="h-4 w-4" />
+              Crea menù
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {menus.map((menu) => {
+              const selected = selectedId === menu.id;
+
+              return (
+                <article
+                  key={menu.id}
+                  className={cn(
+                    "overflow-hidden rounded-2xl border bg-[#111E1E] transition",
+                    selected
+                      ? "border-[#D8E9AC]/50"
+                      : "border-white/[0.07]",
+                  )}
+                >
+                  <div className="p-4">
+                    <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedId(selected ? "" : menu.id)
+                        }
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="font-display text-lg font-semibold text-white">
+                            {menu.name_it}
+                          </h4>
+
+                          <span
+                            className={cn(
+                              "rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider",
+                              menu.is_active
+                                ? "bg-[#D8E9AC]/15 text-[#D8E9AC]"
+                                : "bg-[#252D2D] text-[#999999]",
+                            )}
+                          >
+                            {menu.is_active ? "Attivo" : "Disattivato"}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 text-xs text-[#B5CBC9]">
+                          {menu.name_en}
+                        </p>
+
+                        {menu.description_it && (
+                          <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-[#999999]">
+                            {menu.description_it}
+                          </p>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedId(selected ? "" : menu.id)
+                        }
+                        aria-label={
+                          selected
+                            ? "Chiudi dettagli"
+                            : "Apri dettagli"
+                        }
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#152222] text-[#D8E9AC]"
+                      >
+                        {selected ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleActive(menu)}
+                        className="flex items-center gap-2 text-[10px] font-semibold text-[#B5CBC9]"
+                      >
+                        <span
+                          className={cn(
+                            "relative h-5 w-9 rounded-full transition",
+                            menu.is_active
+                              ? "bg-[#D8E9AC]"
+                              : "bg-[#45483D]",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "absolute top-0.5 h-4 w-4 rounded-full bg-[#0B1818] transition-all",
+                              menu.is_active ? "left-[18px]" : "left-0.5",
+                            )}
+                          />
+                        </span>
+                        {menu.is_active ? "Attivo" : "Non attivo"}
+                      </button>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(menu)}
+                          className="grid h-9 w-9 place-items-center rounded-xl bg-[#152222] text-[#B5CBC9] transition hover:text-[#D8E9AC]"
+                          aria-label="Modifica menu"
+                          title="Modifica"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => deleteMenu(menu)}
+                          disabled={busy}
+                          className="grid h-9 w-9 place-items-center rounded-xl bg-[#152222] text-[#B5CBC9] transition hover:text-[#FFB4AB]"
+                          aria-label="Elimina menu"
+                          title="Elimina"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Associazione piatti */}
+                  {selected && (
+                    <div className="border-t border-white/[0.07] bg-[#0D1B1B] p-4">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowAssignments((value) => !value)
+                        }
+                        className="flex w-full items-center justify-between gap-3 text-left"
+                      >
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#D8E9AC]">
+                            Composizione
+                          </p>
+                          <h4 className="mt-1 font-display text-base text-white">
+                            Associazione piatti
+                          </h4>
+                        </div>
+
+                        {showAssignments ? (
+                          <ChevronUp className="h-4 w-4 text-[#D8E9AC]" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-[#D8E9AC]" />
+                        )}
+                      </button>
+
+                      {showAssignments && (
+                        <div className="mt-4">
+                          <p className="mb-3 text-xs leading-5 text-[#999999]">
+                            Seleziona i piatti da includere in questo
+                            menù. Uno stesso piatto può appartenere
+                            contemporaneamente a più menù.
+                          </p>
+
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#999999]" />
+                            <input
+                              className={cn(input, "pl-10")}
+                              value={search}
+                              onChange={(e) => setSearch(e.target.value)}
+                              placeholder="Cerca un piatto…"
+                            />
+                          </div>
+
+                          {dishesLoading || assignmentsLoading ? (
+                            <p className="py-6 text-center text-xs text-[#999999]">
+                              Caricamento piatti…
+                            </p>
+                          ) : (
+                            <>
+                              <div className="my-3 flex items-center justify-between">
+                                <span className="text-[10px] text-[#999999]">
+                                  Piatti selezionati
+                                </span>
+                                <span className="rounded-full bg-[#D8E9AC]/10 px-3 py-1 text-[10px] font-bold text-[#D8E9AC]">
+                                  {assignments.length}
+                                </span>
+                              </div>
+
+                              <div className="max-h-[460px] space-y-2 overflow-y-auto pr-1">
+                                {filteredDishes.map((dish) => {
+                                  const checked = assignedIds.has(dish.id);
+
+                                  return (
+                                    <label
+                                      key={dish.id}
+                                      className={cn(
+                                        "flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition",
+                                        checked
+                                          ? "border-[#D8E9AC]/40 bg-[#D8E9AC]/[0.06]"
+                                          : "border-white/[0.06] bg-[#152222] hover:border-white/20",
+                                      )}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() => toggleDish(dish)}
+                                        className="h-4 w-4 shrink-0 accent-[#D8E9AC]"
+                                      />
+
+                                      {dish.image ? (
+                                        <img
+                                          src={dish.image}
+                                          alt=""
+                                          className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                                        />
+                                      ) : (
+                                        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[#253333] text-[#D8E9AC]">
+                                          <UtensilsCrossed className="h-4 w-4" />
+                                        </div>
+                                      )}
+
+                                      <span className="min-w-0 flex-1">
+                                        <span className="block truncate text-xs font-semibold text-white">
+                                          {dish.name_it}
+                                        </span>
+                                        <span className="mt-1 block truncate text-[10px] text-[#999999]">
+                                          {dish.name_en}
+                                        </span>
+                                      </span>
+
+                                      {checked && (
+                                        <Check className="h-4 w-4 shrink-0 text-[#D8E9AC]" />
+                                      )}
+                                    </label>
+                                  );
+                                })}
+
+                                {filteredDishes.length === 0 && (
+                                  <p className="py-6 text-center text-xs text-[#999999]">
+                                    Nessun piatto trovato.
+                                  </p>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {!showForm && (
+        <button
+          type="button"
+          onClick={startNew}
+          className={cn(primaryButton, "min-h-12 w-full")}
+        >
+          <CirclePlus className="h-4 w-4" />
+          Crea un nuovo menù
+        </button>
+      )}
     </section>
   );
 }
