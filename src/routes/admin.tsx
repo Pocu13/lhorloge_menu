@@ -6,32 +6,21 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   ArrowLeft,
-  Camera,
-  Check,
   ChevronDown,
   ChevronUp,
   Eye,
-  EyeOff,
   FileUp,
   LogOut,
   Pencil,
   Plus,
   Trash2,
-  Utensils,
-  X,
 } from "lucide-react";
 import { MenuImporter } from "../lib/menu-importer";
 import { supabase } from "@/integrations/supabase/client";
 import { allDishesQuery, type DishRow } from "@/lib/menu-api";
-import {
-  allergenLabels,
-  categories,
-  dietLabels,
-  formatPrice,
-  type AllergenId,
-  type DietId,
-} from "@/lib/menu-data";
+import { categories, formatPrice } from "@/lib/menu-data";
 import { AdminMenus } from "@/components/admin-menus";
+import { DishEditor } from "@/components/dish-editor";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin")({
@@ -93,9 +82,7 @@ const empty: DishRow = {
 };
 
 function AdminPage() {
-  const [state, setState] = useState<
-    "loading" | "out" | "in"
-  >("loading");
+  const [state, setState] = useState<"loading" | "out" | "in">("loading");
 
   useEffect(() => {
     let mounted = true;
@@ -110,18 +97,14 @@ function AdminPage() {
 
     void check();
 
-    const { data: subscription } =
-      supabase.auth.onAuthStateChange((event, session) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (event, session) => {
         if (!mounted) return;
 
-        if (event === "SIGNED_IN" && session) {
-          setState("in");
-        }
-
-        if (event === "SIGNED_OUT") {
-          setState("out");
-        }
-      });
+        if (event === "SIGNED_IN" && session) setState("in");
+        if (event === "SIGNED_OUT") setState("out");
+      },
+    );
 
     return () => {
       mounted = false;
@@ -187,9 +170,7 @@ function Login() {
             alt="L'Horloge"
             className="mx-auto mb-4 h-16 w-16 object-contain"
           />
-          <h1 className="font-display text-3xl text-white">
-            L'Horloge
-          </h1>
+          <h1 className="font-display text-3xl text-white">L'Horloge</h1>
           <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-[#D8E9AC]">
             Area amministrazione
           </p>
@@ -217,10 +198,7 @@ function Login() {
           />
         </label>
 
-        <button
-          disabled={busy}
-          className={cn(primaryButton, "w-full")}
-        >
+        <button disabled={busy} className={cn(primaryButton, "w-full")}>
           {busy ? "Accesso…" : "Accedi"}
         </button>
       </form>
@@ -243,9 +221,9 @@ function Editor() {
     Object.fromEntries(categories.map((c) => [c.id, true])),
   );
 
-  const remove = async (r: DishRow) => {
+  const remove = async (r: DishRow): Promise<boolean> => {
     if (!confirm(`Eliminare definitivamente "${r.name_it}"?`)) {
-      return;
+      return false;
     }
 
     const { error } = await supabase
@@ -255,11 +233,12 @@ function Editor() {
 
     if (error) {
       toast.error(error.message);
-      return;
+      return false;
     }
 
     toast.success("Piatto eliminato");
     await qc.invalidateQueries({ queryKey: ["dishes"] });
+    return true;
   };
 
   const toggle = async (r: DishRow) => {
@@ -293,9 +272,7 @@ function Editor() {
     const allOpen = categories.every((c) => expanded[c.id]);
 
     setExpanded(
-      Object.fromEntries(
-        categories.map((c) => [c.id, !allOpen]),
-      ),
+      Object.fromEntries(categories.map((c) => [c.id, !allOpen])),
     );
   };
 
@@ -318,12 +295,16 @@ function Editor() {
 
   if (edit) {
     return (
-      <DishForm
+      <DishEditor
         initial={edit.row}
         isNew={edit.isNew}
         onDone={() => {
           setEdit(null);
           qc.invalidateQueries({ queryKey: ["dishes"] });
+        }}
+        onDelete={async () => {
+          const deleted = await remove(edit.row);
+          if (deleted) setEdit(null);
         }}
       />
     );
@@ -339,9 +320,7 @@ function Editor() {
               alt="L'Horloge"
               className="h-9 w-9 object-contain"
             />
-            <span className="font-display text-xl text-white">
-              L'horloge
-            </span>
+            <span className="font-display text-xl text-white">L'horloge</span>
           </Link>
 
           <button
@@ -416,9 +395,7 @@ function Editor() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl bg-[#152222] p-3">
-                    <p className="text-xs text-[#999999]">
-                      Piatti totali
-                    </p>
+                    <p className="text-xs text-[#999999]">Piatti totali</p>
                     <p className="mt-1 font-display text-2xl text-white">
                       {data.length}
                     </p>
@@ -481,8 +458,8 @@ function Editor() {
               <div className="mb-5 flex items-start gap-2 rounded-xl border border-[#FFB4AB]/30 bg-[#93000A]/10 p-3 text-xs text-[#FFB4AB]">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>
-                  {toCheck} piatti hanno allergeni da verificare.
-                  Controllali prima di renderli visibili ai clienti.
+                  {toCheck} piatti hanno allergeni da verificare. Controllali
+                  prima di renderli visibili ai clienti.
                 </p>
               </div>
             )}
@@ -571,7 +548,8 @@ function Editor() {
                                             ? r.image
                                             : supabase.storage
                                                 .from("dish-photos")
-                                                .getPublicUrl(r.image).data.publicUrl
+                                                .getPublicUrl(r.image).data
+                                                .publicUrl
                                         }
                                         alt={r.name_it}
                                         className="h-full w-full object-cover"
@@ -598,10 +576,7 @@ function Editor() {
 
                                     <button
                                       onClick={() =>
-                                        window.open(
-                                          `/piatto/${r.id}`,
-                                          "_blank",
-                                        )
+                                        window.open(`/piatto/${r.id}`, "_blank")
                                       }
                                       className="mt-1 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[#D8E9AC]"
                                     >
@@ -639,10 +614,7 @@ function Editor() {
                                   <div className="flex items-center gap-2">
                                     <button
                                       onClick={() =>
-                                        setEdit({
-                                          row: r,
-                                          isNew: false,
-                                        })
+                                        setEdit({ row: r, isNew: false })
                                       }
                                       aria-label="Modifica piatto"
                                       className="grid h-9 w-9 place-items-center rounded-xl bg-[#1F2C2C] text-[#B5CBC9] transition hover:text-[#D8E9AC]"
@@ -651,7 +623,7 @@ function Editor() {
                                     </button>
 
                                     <button
-                                      onClick={() => remove(r)}
+                                      onClick={() => void remove(r)}
                                       aria-label="Elimina piatto"
                                       className="grid h-9 w-9 place-items-center rounded-xl text-[#B5CBC9] transition hover:text-[#FFB4AB]"
                                     >
@@ -682,10 +654,7 @@ function Editor() {
                   "La creazione di nuove categorie richiede prima l'aggiornamento del database. La realizzeremo nella fase successiva.",
                 )
               }
-              className={cn(
-                primaryButton,
-                "mt-8 min-h-12 w-full",
-              )}
+              className={cn(primaryButton, "mt-8 min-h-12 w-full")}
             >
               <Plus className="h-4 w-4" />
               Nuova categoria
@@ -693,507 +662,6 @@ function Editor() {
           </>
         )}
       </main>
-    </div>
-  );
-}
-
-const slug = (s: string) =>
-  s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-
-function DishForm({
-  initial,
-  isNew,
-  onDone,
-}: {
-  initial: DishRow;
-  isNew: boolean;
-  onDone: () => void;
-}) {
-  const [r, setR] = useState(initial);
-  const [busy, setBusy] = useState(false);
-  const [uploading, setUploading] = useState(false);
-
-  const set = <K extends keyof DishRow>(k: K, v: DishRow[K]) =>
-    setR((p) => ({ ...p, [k]: v }));
-
-  const list = (v: string) =>
-    v
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-  const opt = (v: string) => (v.trim() ? v : null);
-
-  const upload = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      toast.error("Seleziona un file immagine valido");
-      return;
-    }
-
-    setUploading(true);
-
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `${crypto.randomUUID()}.${ext}`;
-
-    const { error } = await supabase.storage
-      .from("dish-photos")
-      .upload(path, file, {
-        contentType: file.type,
-        upsert: false,
-      });
-
-    setUploading(false);
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
-    // Nel database viene salvato il percorso dell'oggetto,
-    // non un URL firmato con scadenza.
-    set("image", path);
-    toast.success("Foto caricata. Ricordati di salvare il piatto.");
-  };
-
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!r.name_it.trim()) {
-      toast.error("Inserisci il nome in italiano");
-      return;
-    }
-
-    if (!r.allergens_checked) {
-      toast.error("Conferma prima di aver verificato gli allergeni");
-      return;
-    }
-
-    setBusy(true);
-
-    const { updated_at: _updatedAt, ...payload } = {
-      ...r,
-      id: isNew ? slug(r.name_it) || crypto.randomUUID() : r.id,
-      image: r.image,
-      updated_at: new Date().toISOString(),
-    };
-
-    const result = isNew
-      ? await supabase.from("dishes").insert(payload)
-      : await supabase
-          .from("dishes")
-          .update(payload)
-          .eq("id", r.id);
-
-    setBusy(false);
-
-    if (result.error) {
-      toast.error(result.error.message);
-      return;
-    }
-
-    toast.success("Piatto salvato");
-    onDone();
-  };
-
-  const pair = (
-    label: string,
-    it: keyof DishRow,
-    en: keyof DishRow,
-    area = false,
-  ) => (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {(
-        [
-          ["IT", it],
-          ["EN", en],
-        ] as const
-      ).map(([language, key]) => (
-        <label
-          key={language}
-          className="block text-[11px] text-[#B5CBC9]"
-        >
-          {label} ({language})
-          {area ? (
-            <textarea
-              rows={3}
-              className={input}
-              value={String(r[key] ?? "")}
-              onChange={(e) =>
-                set(key, e.target.value as never)
-              }
-            />
-          ) : (
-            <input
-              className={input}
-              value={String(r[key] ?? "")}
-              onChange={(e) => {
-                const value = e.target.value;
-                const formatted =
-                  key.startsWith("signature") ||
-                  key.startsWith("sommelier")
-                    ? opt(value)
-                    : value;
-
-                set(key, formatted as never);
-              }}
-            />
-          )}
-        </label>
-      ))}
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen bg-[#0B1818] text-[#D7E5E5]">
-      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#081616]/95 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-3xl items-center gap-3 px-4">
-          <button
-            onClick={onDone}
-            aria-label="Torna alla schermata precedente"
-            className="grid h-10 w-10 place-items-center rounded-full bg-[#132726] text-white"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display text-lg text-white">
-              {isNew ? "Nuovo Piatto" : "Modifica Piatto"}
-            </h1>
-            <p className="text-[10px] uppercase tracking-wider text-[#D8E9AC]">
-              {categories.find((c) => c.id === r.category)?.label.it}
-            </p>
-          </div>
-
-          <button
-            onClick={onDone}
-            aria-label="Chiudi"
-            className="grid h-9 w-9 place-items-center rounded-full text-[#B5CBC9]"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </header>
-
-      <form
-        onSubmit={save}
-        className="mx-auto max-w-3xl space-y-6 px-4 pb-12 pt-5"
-      >
-        <section className="space-y-4 rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg text-white">
-              Informazioni principali
-            </h2>
-            <span className="rounded-full bg-[#D8E9AC]/15 px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-[#D8E9AC]">
-              {categories.find((c) => c.id === r.category)?.label.it}
-            </span>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-[11px] text-[#B5CBC9]">
-              Categoria
-              <select
-                className={input}
-                value={r.category}
-                onChange={(e) =>
-                  set("category", e.target.value)
-                }
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label.it}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block text-[11px] text-[#B5CBC9]">
-              Prezzo (€)
-              <input
-                type="number"
-                step="0.5"
-                min="0"
-                className={input}
-                value={r.price}
-                onChange={(e) =>
-                  set("price", Number(e.target.value))
-                }
-              />
-            </label>
-          </div>
-
-          {pair("Nome", "name_it", "name_en")}
-          {pair("Etichetta", "tag_it", "tag_en")}
-          {pair("Descrizione", "description_it", "description_en", true)}
-
-          <label className="block text-[11px] text-[#B5CBC9]">
-            Ordine di visualizzazione
-            <input
-              type="number"
-              className={input}
-              value={r.sort_order}
-              onChange={(e) =>
-                set("sort_order", Number(e.target.value))
-              }
-            />
-          </label>
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
-          <h2 className="font-display text-lg text-white">
-            Fotografia
-          </h2>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="h-24 w-24 overflow-hidden rounded-xl bg-[#2A3737]">
-              {r.image ? (
-                <img
-                  src={
-                    /^https?:\/\//i.test(r.image)
-                      ? r.image
-                      : supabase.storage
-                          .from("dish-photos")
-                          .getPublicUrl(r.image).data.publicUrl
-                  }
-                  alt="Anteprima piatto"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-xs text-[#999999]">
-                  Nessuna foto
-                </div>
-              )}
-            </div>
-
-            <label
-              className={cn(
-                secondaryButton,
-                "cursor-pointer",
-                uploading && "pointer-events-none opacity-50",
-              )}
-            >
-              <Camera className="h-4 w-4" />
-              {uploading ? "Caricamento…" : "Carica foto"}
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                disabled={uploading}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void upload(file);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-
-            {r.image && (
-              <button
-                type="button"
-                onClick={() => set("image", null)}
-                className="text-xs text-[#FFB4AB]"
-              >
-                Rimuovi foto
-              </button>
-            )}
-          </div>
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
-          <h2 className="font-display text-lg text-white">
-            Ingredienti
-          </h2>
-
-          {(["it", "en"] as const).map((language) => (
-            <label
-              key={language}
-              className="block text-[11px] text-[#B5CBC9]"
-            >
-              Ingredienti ({language.toUpperCase()})
-              <textarea
-                rows={3}
-                className={input}
-                value={
-                  r[`ingredients_${language}`]?.join(", ") ?? ""
-                }
-                onChange={(e) =>
-                  set(
-                    `ingredients_${language}`,
-                    list(e.target.value),
-                  )
-                }
-                placeholder="Separare gli ingredienti con una virgola"
-              />
-            </label>
-          ))}
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
-          <h2 className="font-display text-lg text-white">
-            Allergeni e preferenze alimentari
-          </h2>
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {(Object.keys(allergenLabels) as AllergenId[]).map(
-              (allergen) => {
-                const active = r.allergens?.includes(allergen);
-
-                return (
-                  <button
-                    type="button"
-                    key={allergen}
-                    onClick={() =>
-                      set(
-                        "allergens",
-                        active
-                          ? r.allergens.filter(
-                              (value: string) => value !== allergen,
-                            )
-                          : [...(r.allergens || []), allergen],
-                      )
-                    }
-                    className={cn(
-                      "min-h-10 rounded-lg border px-2 text-left text-[11px] transition",
-                      active
-                        ? "border-[#FFB4AB]/50 bg-[#93000A]/20 text-[#FFB4AB]"
-                        : "border-white/10 bg-[#152222] text-[#B5CBC9]",
-                    )}
-                  >
-                    {active ? "✓ " : ""}
-                    {allergenLabels[allergen].it}
-                  </button>
-                );
-              },
-            )}
-          </div>
-
-          <div className="border-t border-white/[0.07] pt-4">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-[#999999]">
-              Preferenze alimentari
-            </p>
-
-            <div className="flex flex-wrap gap-2">
-              {(Object.keys(dietLabels) as DietId[]).map((diet) => (
-                <button
-                  type="button"
-                  key={diet}
-                  onClick={() => set(diet, !r[diet])}
-                  className={cn(
-                    "min-h-9 rounded-full border px-3 text-[10px] font-semibold",
-                    r[diet]
-                      ? "border-[#D8E9AC] bg-[#D8E9AC]/15 text-[#D8E9AC]"
-                      : "border-white/10 text-[#999999]",
-                  )}
-                >
-                  {dietLabels[diet].it}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <label
-            className={cn(
-              "flex items-start gap-3 rounded-xl border p-3 text-xs",
-              r.allergens_checked
-                ? "border-[#D8E9AC]/20 text-[#D7E5E5]"
-                : "border-[#FFB4AB]/40 text-[#FFB4AB]",
-            )}
-          >
-            <input
-              type="checkbox"
-              checked={r.allergens_checked}
-              onChange={(e) =>
-                set("allergens_checked", e.target.checked)
-              }
-              className="mt-0.5 h-4 w-4 accent-[#D8E9AC]"
-            />
-            <span>
-              Ho verificato gli allergeni di questo piatto.
-              La conferma è necessaria per pubblicarlo.
-            </span>
-          </label>
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
-          <h2 className="font-display text-lg text-white">
-            Abbinamento del sommelier
-          </h2>
-
-          {pair(
-            "Vino consigliato",
-            "sommelier_wine_it",
-            "sommelier_wine_en",
-          )}
-
-          {pair(
-            "Nota sull'abbinamento",
-            "sommelier_note_it",
-            "sommelier_note_en",
-            true,
-          )}
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
-          <h2 className="font-display text-lg text-white">
-            Nota dello chef
-          </h2>
-
-          {pair(
-            "Nota",
-            "signature_note_it",
-            "signature_note_en",
-            true,
-          )}
-
-          {pair(
-            "Abbinamento",
-            "signature_pairing_it",
-            "signature_pairing_en",
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
-          <label className="flex items-center justify-between gap-3">
-            <span>
-              <span className="block text-sm font-semibold text-white">
-                Visibile nel menu
-              </span>
-              <span className="mt-1 block text-[11px] text-[#999999]">
-                Attiva o nascondi questo piatto ai clienti.
-              </span>
-            </span>
-
-            <input
-              type="checkbox"
-              checked={r.visible}
-              onChange={(e) => set("visible", e.target.checked)}
-              className="h-5 w-5 accent-[#D8E9AC]"
-            />
-          </label>
-        </section>
-
-        <div className="grid grid-cols-2 gap-3 pb-8">
-          <button
-            type="button"
-            onClick={onDone}
-            className={secondaryButton}
-          >
-            Annulla
-          </button>
-
-          <button
-            disabled={busy || uploading}
-            className={primaryButton}
-          >
-            <Check className="h-4 w-4" />
-            {busy ? "Salvataggio…" : "Salva piatto"}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }
