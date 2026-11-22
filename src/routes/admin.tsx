@@ -5,7 +5,11 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
+  ArrowLeft,
   Camera,
+  Check,
+  ChevronDown,
+  ChevronUp,
   Eye,
   EyeOff,
   FileUp,
@@ -13,6 +17,8 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Utensils,
+  X,
 } from "lucide-react";
 import { MenuImporter } from "../lib/menu-importer";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +31,6 @@ import {
   type AllergenId,
   type DietId,
 } from "@/lib/menu-data";
-import { ClockMark } from "@/components/menu-ui";
 import { AdminMenus } from "@/components/admin-menus";
 import { cn } from "@/lib/utils";
 
@@ -33,162 +38,25 @@ export const Route = createFileRoute("/admin")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Area Admin — L'Horloge" },
+      { title: "Gestione Menù — L'Horloge" },
       {
         name: "description",
         content: "Gestione dei piatti e dei menu di L'Horloge.",
       },
-      { property: "og:title", content: "Area Admin — L'Horloge" },
-      {
-        property: "og:description",
-        content: "Gestione dei piatti e dei menu.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
     ],
   }),
   component: AdminPage,
 });
 
-function AdminPage() {
-  const [state, setState] = useState<
-    "loading" | "out" | "in" | "denied"
-  >("loading");
-
-  useEffect(() => {
-    const check = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-
-      if (!sessionData.session || !sessionData.session.user) {
-        setState("out");
-        return;
-      }
-
-      setState("in");
-    };
-
-    check();
-
-    const { data: sub } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === "SIGNED_IN" && session) {
-          setState("in");
-        } else if (event === "SIGNED_OUT") {
-          setState("out");
-        }
-      },
-    );
-
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  return (
-    <div className="min-h-screen">
-      <header className="border-b border-border/30">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-          <Link to="/" className="group flex items-center gap-3">
-            <ClockMark />
-            <span className="font-display text-xl text-title">Admin</span>
-          </Link>
-
-          {state === "in" && (
-            <button
-              onClick={() => supabase.auth.signOut()}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-title"
-            >
-              <LogOut className="h-4 w-4" />
-              Esci
-            </button>
-          )}
-        </div>
-      </header>
-
-      {state === "loading" && (
-        <p className="p-10 text-center text-muted-foreground">…</p>
-      )}
-
-      {(state === "out" || state === "denied") && <Login />}
-
-      {state === "in" && <Editor />}
-    </div>
-  );
-}
-
 const input =
-  "w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground focus:border-sage focus:outline-none";
+  "mt-1 w-full rounded-xl border border-white/10 bg-[#132726] px-3.5 py-3 text-sm text-[#EEEEEE] placeholder:text-[#999999] outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
 
-function Login() {
-  const [user, setUser] = useState("");
-  const [pass, setPass] = useState("");
-  const [busy, setBusy] = useState(false);
+const primaryButton =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#D8E9AC] px-5 text-xs font-bold uppercase tracking-wider text-[#0B1818] shadow-[0_4px_20px_rgba(216,233,172,0.16)] transition active:scale-[0.98] disabled:opacity-50";
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const email = user.trim().toLowerCase();
-
-    if (!email || !email.includes("@")) {
-      toast.error("Inserisci un'email valida");
-      return;
-    }
-
-    setBusy(true);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: pass,
-    });
-
-    setBusy(false);
-
-    if (error) {
-      console.error("Errore login:", error.message);
-      toast.error("Credenziali non valide: " + error.message);
-    } else {
-      toast.success("Accesso effettuato con successo!");
-      window.location.reload();
-    }
-  };
-
-  return (
-    <form
-      onSubmit={submit}
-      className="mx-auto mt-16 max-w-sm space-y-4 rounded-lg border border-border/40 bg-card p-6"
-    >
-      <h1 className="font-display text-2xl text-title">Accesso admin</h1>
-
-      <label className="block text-sm text-muted-foreground">
-        Email
-        <input
-          className={cn(input, "mt-1")}
-          value={user}
-          onChange={(e) => setUser(e.target.value)}
-          autoComplete="email"
-          placeholder="admin@lhorloge.it"
-        />
-      </label>
-
-      <label className="block text-sm text-muted-foreground">
-        Password
-        <input
-          type="password"
-          className={cn(input, "mt-1")}
-          value={pass}
-          onChange={(e) => setPass(e.target.value)}
-          autoComplete="current-password"
-        />
-      </label>
-
-      <button
-        disabled={busy}
-        className="min-h-11 w-full rounded-full bg-sage text-sm font-semibold text-sage-foreground disabled:opacity-60"
-      >
-        Entra
-      </button>
-    </form>
-  );
-}
+const secondaryButton =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[rgba(216,233,172,0.2)] bg-[#132726] px-4 text-xs font-semibold uppercase tracking-wider text-[#EEEEEE] transition hover:border-[#D8E9AC] active:scale-[0.98]";
 
 const empty: DishRow = {
   id: "",
@@ -224,9 +92,145 @@ const empty: DishRow = {
   sommelier_note_en: null,
 };
 
+function AdminPage() {
+  const [state, setState] = useState<
+    "loading" | "out" | "in"
+  >("loading");
+
+  useEffect(() => {
+    let mounted = true;
+
+    const check = async () => {
+      const { data } = await supabase.auth.getSession();
+
+      if (mounted) {
+        setState(data.session?.user ? "in" : "out");
+      }
+    };
+
+    void check();
+
+    const { data: subscription } =
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (!mounted) return;
+
+        if (event === "SIGNED_IN" && session) {
+          setState("in");
+        }
+
+        if (event === "SIGNED_OUT") {
+          setState("out");
+        }
+      });
+
+    return () => {
+      mounted = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
+  if (state === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0B1818] text-[#D8E9AC]">
+        Caricamento…
+      </div>
+    );
+  }
+
+  if (state === "out") return <Login />;
+
+  return <Editor />;
+}
+
+function Login() {
+  const [user, setUser] = useState("");
+  const [pass, setPass] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const email = user.trim().toLowerCase();
+
+    if (!email || !email.includes("@")) {
+      toast.error("Inserisci un'email valida");
+      return;
+    }
+
+    setBusy(true);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: pass,
+    });
+
+    setBusy(false);
+
+    if (error) {
+      toast.error("Credenziali non valide: " + error.message);
+      return;
+    }
+
+    toast.success("Accesso effettuato");
+    window.location.reload();
+  };
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#0B1818] px-5">
+      <form
+        onSubmit={submit}
+        className="w-full max-w-sm space-y-6 rounded-2xl border border-white/10 bg-[#132726] p-7"
+      >
+        <div className="text-center">
+          <img
+            src="/logo.png"
+            alt="L'Horloge"
+            className="mx-auto mb-4 h-16 w-16 object-contain"
+          />
+          <h1 className="font-display text-3xl text-white">
+            L'Horloge
+          </h1>
+          <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-[#D8E9AC]">
+            Area amministrazione
+          </p>
+        </div>
+
+        <label className="block text-xs text-[#999999]">
+          Email
+          <input
+            className={input}
+            value={user}
+            onChange={(e) => setUser(e.target.value)}
+            autoComplete="email"
+            placeholder="admin@lhorloge.it"
+          />
+        </label>
+
+        <label className="block text-xs text-[#999999]">
+          Password
+          <input
+            type="password"
+            className={input}
+            value={pass}
+            onChange={(e) => setPass(e.target.value)}
+            autoComplete="current-password"
+          />
+        </label>
+
+        <button
+          disabled={busy}
+          className={cn(primaryButton, "w-full")}
+        >
+          {busy ? "Accesso…" : "Accedi"}
+        </button>
+      </form>
+    </main>
+  );
+}
+
 function Editor() {
   const qc = useQueryClient();
-  const { data = [] } = useQuery(allDishesQuery);
+  const { data = [], isLoading } = useQuery(allDishesQuery);
 
   const [edit, setEdit] = useState<{
     row: DishRow;
@@ -235,9 +239,14 @@ function Editor() {
 
   const [importing, setImporting] = useState(false);
   const [section, setSection] = useState<"dishes" | "menus">("dishes");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(
+    Object.fromEntries(categories.map((c) => [c.id, true])),
+  );
 
   const remove = async (r: DishRow) => {
-    if (!confirm(`Eliminare "${r.name_it}"?`)) return;
+    if (!confirm(`Eliminare definitivamente "${r.name_it}"?`)) {
+      return;
+    }
 
     const { error } = await supabase
       .from("dishes")
@@ -250,7 +259,7 @@ function Editor() {
     }
 
     toast.success("Piatto eliminato");
-    qc.invalidateQueries({ queryKey: ["dishes"] });
+    await qc.invalidateQueries({ queryKey: ["dishes"] });
   };
 
   const toggle = async (r: DishRow) => {
@@ -267,13 +276,32 @@ function Editor() {
     toast.success(
       r.visible
         ? "Piatto nascosto dal menu"
-        : "Piatto di nuovo visibile",
+        : "Piatto nuovamente visibile",
     );
 
-    qc.invalidateQueries({ queryKey: ["dishes"] });
+    await qc.invalidateQueries({ queryKey: ["dishes"] });
   };
 
+  const toggleSection = (id: string) => {
+    setExpanded((current) => ({
+      ...current,
+      [id]: !current[id],
+    }));
+  };
+
+  const toggleAll = () => {
+    const allOpen = categories.every((c) => expanded[c.id]);
+
+    setExpanded(
+      Object.fromEntries(
+        categories.map((c) => [c.id, !allOpen]),
+      ),
+    );
+  };
+
+  const totalVisible = data.filter((r) => r.visible).length;
   const toCheck = data.filter((r) => !r.allergens_checked).length;
+  const allOpen = categories.every((c) => expanded[c.id]);
 
   if (importing) {
     return (
@@ -301,178 +329,371 @@ function Editor() {
     );
   }
 
-  // Sezione di gestione dei menu
-  if (section === "menus") {
-    return (
-      <main className="mx-auto max-w-5xl px-5 py-8">
-        <div className="mb-6 flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setSection("dishes")}
-            className="min-h-10 rounded-full border border-border/60 px-5 text-sm text-muted-foreground transition-colors hover:text-title"
-          >
-            Piatti
-          </button>
+  return (
+    <div className="min-h-screen bg-[#0B1818] text-[#D7E5E5]">
+      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#081616]/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-[68px] max-w-5xl items-center justify-between px-4 sm:px-6">
+          <Link to="/" className="flex items-center gap-3">
+            <img
+              src="/logo.png"
+              alt="L'Horloge"
+              className="h-9 w-9 object-contain"
+            />
+            <span className="font-display text-xl text-white">
+              L'horloge
+            </span>
+          </Link>
 
           <button
-            onClick={() => setSection("menus")}
-            className="min-h-10 rounded-full bg-sage px-5 text-sm font-semibold text-sage-foreground"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.reload();
+            }}
+            aria-label="Esci"
+            className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#0B1818] transition hover:bg-[#D8E9AC]"
           >
-            Menu
+            <LogOut className="h-4 w-4" />
           </button>
         </div>
+      </header>
 
-        <AdminMenus />
-      </main>
-    );
-  }
+      <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:px-6">
+        <div className="mb-8 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => window.open("/", "_blank")}
+            className={secondaryButton}
+          >
+            <Eye className="h-4 w-4 text-[#B5CBC9]" />
+            Anteprima
+          </button>
 
-  // Sezione di gestione dei piatti
-  return (
-    <main className="mx-auto max-w-5xl px-5 py-8">
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => setSection("dishes")}
-          className="min-h-10 rounded-full bg-sage px-5 text-sm font-semibold text-sage-foreground"
-        >
-          Piatti
-        </button>
-
-        <button
-          onClick={() => setSection("menus")}
-          className="min-h-10 rounded-full border border-border/60 px-5 text-sm text-muted-foreground transition-colors hover:text-title"
-        >
-          Menu
-        </button>
-      </div>
-
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl text-title">
-          Piatti ({data.length})
-        </h1>
-
-        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setImporting(true)}
-            className="flex min-h-11 items-center gap-2 rounded-full border border-border/60 px-5 text-sm text-title"
+            className={secondaryButton}
           >
-            <FileUp className="h-4 w-4" />
-            Importa da PDF
-          </button>
-
-          <button
-            onClick={() =>
-              setEdit({
-                row: {
-                  ...empty,
-                  sort_order: (data.at(-1)?.sort_order ?? 0) + 1,
-                },
-                isNew: true,
-              })
-            }
-            className="flex min-h-11 items-center gap-2 rounded-full bg-sage px-5 text-sm font-semibold text-sage-foreground"
-          >
-            <Plus className="h-4 w-4" />
-            Nuovo piatto
+            <FileUp className="h-4 w-4 text-[#D8E9AC]" />
+            Carica PDF
           </button>
         </div>
-      </div>
 
-      {toCheck > 0 && (
-        <p className="mb-6 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          {toCheck} piatti con allergeni da verificare: restano nascosti
-          finché non li confermi.
-        </p>
-      )}
-
-      {categories.map((c) => (
-        <section key={c.id} className="mb-8">
-          <h2 className="mb-3 font-display text-lg italic text-title">
-            {c.label.it}
+        <section className="mb-8">
+          <h2 className="mb-5 font-display text-2xl font-semibold text-white">
+            Tipi Menù
           </h2>
 
-          <ul className="divide-y divide-border/30 rounded-lg border border-border/30 bg-card/60">
-            {data
-              .filter((r) => r.category === c.id)
-              .map((r) => (
-                <li
-                  key={r.id}
-                  className={cn(
-                    "flex items-center gap-3 p-3",
-                    !r.visible && "opacity-50",
-                  )}
-                >
-                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-surface-low">
-                    {r.image && (
-                      <img
-                        src={r.image}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    )}
+          <div className="rounded-2xl bg-[#111E1E] p-4 sm:p-5">
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#0B1818] p-1">
+              <button
+                onClick={() => setSection("dishes")}
+                className={cn(
+                  "min-h-10 rounded-full px-3 text-[10px] font-bold uppercase tracking-wider transition",
+                  section === "dishes"
+                    ? "bg-[#D8E9AC] text-[#0B1818]"
+                    : "text-[#999999]",
+                )}
+              >
+                Gestione piatti
+              </button>
+
+              <button
+                onClick={() => setSection("menus")}
+                className={cn(
+                  "min-h-10 rounded-full px-3 text-[10px] font-bold uppercase tracking-wider transition",
+                  section === "menus"
+                    ? "bg-[#D8E9AC] text-[#0B1818]"
+                    : "text-[#999999]",
+                )}
+              >
+                Gestione menu
+              </button>
+            </div>
+
+            {section === "dishes" && (
+              <div className="mt-5">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-[#D8E9AC]">
+                  Riepilogo disponibilità
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-[#152222] p-3">
+                    <p className="text-xs text-[#999999]">
+                      Piatti totali
+                    </p>
+                    <p className="mt-1 font-display text-2xl text-white">
+                      {data.length}
+                    </p>
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-title">
-                      {r.name_it}
+                  <div className="rounded-xl bg-[#152222] p-3">
+                    <p className="text-xs text-[#999999]">
+                      Visibili ai clienti
                     </p>
-
-                    <p className="text-xs text-muted-foreground">
-                      {formatPrice(Number(r.price), "it")}
-                      {!r.visible && " · Nascosto"}
-                      {!r.allergens_checked && (
-                        <span className="text-destructive">
-                          {" "}
-                          · Allergeni da verificare
-                        </span>
-                      )}
+                    <p className="mt-1 font-display text-2xl text-[#D8E9AC]">
+                      {totalVisible}
                     </p>
                   </div>
-
-                  <button
-                    aria-label={
-                      r.visible
-                        ? "Nascondi dal menu"
-                        : "Mostra nel menu"
-                    }
-                    title={
-                      r.visible
-                        ? "Nascondi dal menu"
-                        : "Mostra nel menu"
-                    }
-                    onClick={() => toggle(r)}
-                    className="grid h-10 w-10 place-items-center rounded-full border border-border/60 hover:text-sage"
-                  >
-                    {r.visible ? (
-                      <Eye className="h-4 w-4" />
-                    ) : (
-                      <EyeOff className="h-4 w-4" />
-                    )}
-                  </button>
-
-                  <button
-                    aria-label="Modifica"
-                    onClick={() =>
-                      setEdit({ row: r, isNew: false })
-                    }
-                    className="grid h-10 w-10 place-items-center rounded-full border border-border/60 hover:text-sage"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-
-                  <button
-                    aria-label="Elimina"
-                    onClick={() => remove(r)}
-                    className="grid h-10 w-10 place-items-center rounded-full border border-border/60 text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </li>
-              ))}
-          </ul>
+                </div>
+              </div>
+            )}
+          </div>
         </section>
-      ))}
-    </main>
+
+        {section === "menus" ? (
+          <AdminMenus />
+        ) : (
+          <>
+            <section className="mb-7">
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <div>
+                  <h1 className="font-display text-2xl font-semibold text-white">
+                    Degustazione a Portate
+                  </h1>
+                  <p className="mt-1 text-xs leading-5 text-[#B5CBC9]">
+                    Gestisci le sezioni e i piatti del percorso.
+                  </p>
+                </div>
+
+                <span className="shrink-0 rounded-full bg-[#1F2C2C] px-3 py-1.5 text-[10px] font-bold text-[#D8E9AC]">
+                  {data.length} Piatti
+                </span>
+              </div>
+
+              <div className="mt-6 flex items-center justify-between gap-3">
+                <button
+                  onClick={toggleAll}
+                  className="inline-flex min-h-9 items-center gap-2 rounded-full bg-[#132726] px-4 text-[10px] font-bold uppercase tracking-wider text-[#D8E9AC]"
+                >
+                  {allOpen ? (
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
+                  {allOpen ? "Comprimi tutto" : "Espandi tutto"}
+                </button>
+
+                <span className="rounded-full bg-[#132726] px-3 py-2 text-[10px] font-semibold text-[#D8E9AC]">
+                  {totalVisible} disponibili
+                </span>
+              </div>
+            </section>
+
+            {toCheck > 0 && (
+              <div className="mb-5 flex items-start gap-2 rounded-xl border border-[#FFB4AB]/30 bg-[#93000A]/10 p-3 text-xs text-[#FFB4AB]">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>
+                  {toCheck} piatti hanno allergeni da verificare.
+                  Controllali prima di renderli visibili ai clienti.
+                </p>
+              </div>
+            )}
+
+            {isLoading ? (
+              <p className="py-10 text-center text-sm text-[#999999]">
+                Caricamento piatti…
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {categories.map((category) => {
+                  const dishes = data.filter(
+                    (r) => r.category === category.id,
+                  );
+
+                  const isExpanded = expanded[category.id] ?? true;
+
+                  return (
+                    <section
+                      key={category.id}
+                      className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111E1E]"
+                    >
+                      <div className="flex items-center gap-2 px-3 py-3.5 sm:px-4">
+                        <button
+                          onClick={() => toggleSection(category.id)}
+                          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                        >
+                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#152222] text-[#D8E9AC]">
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronUp className="h-4 w-4" />
+                            )}
+                          </span>
+
+                          <span className="truncate font-display text-base font-semibold text-white">
+                            {category.label.it}
+                          </span>
+
+                          <span className="rounded-full bg-[#152222] px-2.5 py-1 text-[9px] uppercase tracking-wider text-[#B5CBC9]">
+                            {dishes.length}{" "}
+                            {dishes.length === 1 ? "piatto" : "piatti"}
+                          </span>
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            setEdit({
+                              row: {
+                                ...empty,
+                                category: category.id,
+                                sort_order:
+                                  (data.at(-1)?.sort_order ?? 0) + 1,
+                              },
+                              isNew: true,
+                            })
+                          }
+                          aria-label={`Aggiungi piatto a ${category.label.it}`}
+                          className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 text-[#D8E9AC] transition hover:border-[#D8E9AC]"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="space-y-3 px-3 pb-3 sm:px-4">
+                          {dishes.length === 0 ? (
+                            <div className="rounded-xl border border-dashed border-white/10 px-4 py-7 text-center text-xs text-[#999999]">
+                              Nessun piatto inserito in questa sezione.
+                            </div>
+                          ) : (
+                            dishes.map((r) => (
+                              <article
+                                key={r.id}
+                                className={cn(
+                                  "rounded-2xl border border-white/[0.07] bg-[#152222] p-3.5 transition",
+                                  !r.visible && "opacity-55",
+                                )}
+                              >
+                                <div className="flex gap-3">
+                                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#2A3737]">
+                                    {r.image ? (
+                                      <img
+                                        src={
+                                          /^https?:\/\//i.test(r.image)
+                                            ? r.image
+                                            : supabase.storage
+                                                .from("dish-photos")
+                                                .getPublicUrl(r.image).data.publicUrl
+                                        }
+                                        alt={r.name_it}
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="flex h-full items-center justify-center text-xs text-[#999999]">
+                                        img
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="min-w-0 flex-1">
+                                    <h3 className="font-display text-[15px] font-semibold leading-snug text-white">
+                                      {r.name_it}
+                                    </h3>
+
+                                    <p className="mt-1 font-display text-sm font-bold tabular-nums text-[#D8E9AC]">
+                                      {formatPrice(Number(r.price), "it")}
+                                    </p>
+
+                                    <p className="mt-1 line-clamp-2 text-[11px] leading-[1.55] text-[#B5CBC9]">
+                                      {r.description_it}
+                                    </p>
+
+                                    <button
+                                      onClick={() =>
+                                        window.open(
+                                          `/piatto/${r.id}`,
+                                          "_blank",
+                                        )
+                                      }
+                                      className="mt-1 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[#D8E9AC]"
+                                    >
+                                      Dettagli
+                                      <ArrowLeft className="h-3 w-3 rotate-180" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 flex items-center justify-between border-t border-white/[0.06] pt-3">
+                                  <button
+                                    onClick={() => toggle(r)}
+                                    className="flex min-h-8 items-center gap-2 text-[10px] text-[#D7E5E5]"
+                                  >
+                                    <span
+                                      className={cn(
+                                        "relative h-5 w-9 rounded-full transition",
+                                        r.visible
+                                          ? "bg-[#D8E9AC]"
+                                          : "bg-[#45483D]",
+                                      )}
+                                    >
+                                      <span
+                                        className={cn(
+                                          "absolute top-0.5 h-4 w-4 rounded-full bg-[#0B1818] transition-all",
+                                          r.visible
+                                            ? "left-[18px]"
+                                            : "left-0.5",
+                                        )}
+                                      />
+                                    </span>
+                                    Disponibile al servizio
+                                  </button>
+
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() =>
+                                        setEdit({
+                                          row: r,
+                                          isNew: false,
+                                        })
+                                      }
+                                      aria-label="Modifica piatto"
+                                      className="grid h-9 w-9 place-items-center rounded-xl bg-[#1F2C2C] text-[#B5CBC9] transition hover:text-[#D8E9AC]"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </button>
+
+                                    <button
+                                      onClick={() => remove(r)}
+                                      aria-label="Elimina piatto"
+                                      className="grid h-9 w-9 place-items-center rounded-xl text-[#B5CBC9] transition hover:text-[#FFB4AB]"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {!r.allergens_checked && (
+                                  <p className="mt-2 text-[10px] text-[#FFB4AB]">
+                                    Allergeni da verificare
+                                  </p>
+                                )}
+                              </article>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+            )}
+
+            <button
+              onClick={() =>
+                toast.info(
+                  "La creazione di nuove categorie richiede prima l'aggiornamento del database. La realizzeremo nella fase successiva.",
+                )
+              }
+              className={cn(
+                primaryButton,
+                "mt-8 min-h-12 w-full",
+              )}
+            >
+              <Plus className="h-4 w-4" />
+              Nuova categoria
+            </button>
+          </>
+        )}
+      </main>
+    </div>
   );
 }
 
@@ -509,6 +730,11 @@ function DishForm({
   const opt = (v: string) => (v.trim() ? v : null);
 
   const upload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Seleziona un file immagine valido");
+      return;
+    }
+
     setUploading(true);
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -516,27 +742,22 @@ function DishForm({
 
     const { error } = await supabase.storage
       .from("dish-photos")
-      .upload(path, file, { contentType: file.type });
+      .upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    setUploading(false);
 
     if (error) {
-      setUploading(false);
       toast.error(error.message);
       return;
     }
 
-    const { data, error: e2 } = await supabase.storage
-      .from("dish-photos")
-      .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-
-    setUploading(false);
-
-    if (e2 || !data) {
-      toast.error(e2?.message ?? "Errore");
-      return;
-    }
-
-    set("image", data.signedUrl);
-    toast.success("Foto caricata — ricorda di salvare");
+    // Nel database viene salvato il percorso dell'oggetto,
+    // non un URL firmato con scadenza.
+    set("image", path);
+    toast.success("Foto caricata. Ricordati di salvare il piatto.");
   };
 
   const save = async (e: React.FormEvent) => {
@@ -547,28 +768,31 @@ function DishForm({
       return;
     }
 
+    if (!r.allergens_checked) {
+      toast.error("Conferma prima di aver verificato gli allergeni");
+      return;
+    }
+
     setBusy(true);
 
-    const { updated_at: _u, ...payload } = {
+    const { updated_at: _updatedAt, ...payload } = {
       ...r,
       id: isNew ? slug(r.name_it) || crypto.randomUUID() : r.id,
       image: r.image,
+      updated_at: new Date().toISOString(),
     };
 
-    const { error } = isNew
+    const result = isNew
       ? await supabase.from("dishes").insert(payload)
       : await supabase
           .from("dishes")
-          .update({
-            ...payload,
-            updated_at: new Date().toISOString(),
-          })
+          .update(payload)
           .eq("id", r.id);
 
     setBusy(false);
 
-    if (error) {
-      toast.error(error.message);
+    if (result.error) {
+      toast.error(result.error.message);
       return;
     }
 
@@ -588,36 +812,34 @@ function DishForm({
           ["IT", it],
           ["EN", en],
         ] as const
-      ).map(([l, k]) => (
+      ).map(([language, key]) => (
         <label
-          key={l}
-          className="block text-xs text-muted-foreground"
+          key={language}
+          className="block text-[11px] text-[#B5CBC9]"
         >
-          {label} ({l})
-
+          {label} ({language})
           {area ? (
             <textarea
               rows={3}
-              className={cn(input, "mt-1")}
-              value={String(r[k] ?? "")}
+              className={input}
+              value={String(r[key] ?? "")}
               onChange={(e) =>
-                set(k, e.target.value as never)
+                set(key, e.target.value as never)
               }
             />
           ) : (
             <input
-              className={cn(input, "mt-1")}
-              value={String(r[k] ?? "")}
+              className={input}
+              value={String(r[key] ?? "")}
               onChange={(e) => {
-                const val = e.target.value;
+                const value = e.target.value;
+                const formatted =
+                  key.startsWith("signature") ||
+                  key.startsWith("sommelier")
+                    ? opt(value)
+                    : value;
 
-                const formattedVal =
-                  k.startsWith("signature") ||
-                  k.startsWith("sommelier")
-                    ? opt(val)
-                    : val;
-
-                set(k, formattedVal as never);
+                set(key, formatted as never);
               }}
             />
           )}
@@ -627,263 +849,351 @@ function DishForm({
   );
 
   return (
-    <form
-      onSubmit={save}
-      className="mx-auto max-w-3xl space-y-5 px-5 py-8"
-    >
-      <h1 className="font-display text-2xl text-title">
-        {isNew ? "Nuovo piatto" : "Modifica piatto"}
-      </h1>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className="block text-xs text-muted-foreground">
-          Categoria
-          <select
-            className={cn(input, "mt-1")}
-            value={r.category}
-            onChange={(e) =>
-              set("category", e.target.value)
-            }
+    <div className="min-h-screen bg-[#0B1818] text-[#D7E5E5]">
+      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#081616]/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-3xl items-center gap-3 px-4">
+          <button
+            onClick={onDone}
+            aria-label="Torna alla schermata precedente"
+            className="grid h-10 w-10 place-items-center rounded-full bg-[#132726] text-white"
           >
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label.it}
-              </option>
-            ))}
-          </select>
-        </label>
+            <ArrowLeft className="h-4 w-4" />
+          </button>
 
-        <label className="block text-xs text-muted-foreground">
-          Prezzo (€)
-          <input
-            type="number"
-            step="0.5"
-            min="0"
-            className={cn(input, "mt-1")}
-            value={r.price}
-            onChange={(e) =>
-              set("price", Number(e.target.value))
-            }
-          />
-        </label>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate font-display text-lg text-white">
+              {isNew ? "Nuovo Piatto" : "Modifica Piatto"}
+            </h1>
+            <p className="text-[10px] uppercase tracking-wider text-[#D8E9AC]">
+              {categories.find((c) => c.id === r.category)?.label.it}
+            </p>
+          </div>
 
-        <label className="block text-xs text-muted-foreground">
-          Ordine
-          <input
-            type="number"
-            className={cn(input, "mt-1")}
-            value={r.sort_order}
-            onChange={(e) =>
-              set("sort_order", Number(e.target.value))
-            }
-          />
-        </label>
-      </div>
-
-      {pair("Nome", "name_it", "name_en")}
-      {pair("Etichetta", "tag_it", "tag_en")}
-      {pair("Descrizione", "description_it", "description_en", true)}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {(["it", "en"] as const).map((l) => (
-          <label
-            key={l}
-            className="block text-xs text-muted-foreground"
+          <button
+            onClick={onDone}
+            aria-label="Chiudi"
+            className="grid h-9 w-9 place-items-center rounded-full text-[#B5CBC9]"
           >
-            Ingredienti ({l.toUpperCase()}, separati da virgola)
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </header>
+
+      <form
+        onSubmit={save}
+        className="mx-auto max-w-3xl space-y-6 px-4 pb-12 pt-5"
+      >
+        <section className="space-y-4 rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg text-white">
+              Informazioni principali
+            </h2>
+            <span className="rounded-full bg-[#D8E9AC]/15 px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-[#D8E9AC]">
+              {categories.find((c) => c.id === r.category)?.label.it}
+            </span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-[11px] text-[#B5CBC9]">
+              Categoria
+              <select
+                className={input}
+                value={r.category}
+                onChange={(e) =>
+                  set("category", e.target.value)
+                }
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label.it}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-[11px] text-[#B5CBC9]">
+              Prezzo (€)
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                className={input}
+                value={r.price}
+                onChange={(e) =>
+                  set("price", Number(e.target.value))
+                }
+              />
+            </label>
+          </div>
+
+          {pair("Nome", "name_it", "name_en")}
+          {pair("Etichetta", "tag_it", "tag_en")}
+          {pair("Descrizione", "description_it", "description_en", true)}
+
+          <label className="block text-[11px] text-[#B5CBC9]">
+            Ordine di visualizzazione
             <input
-              className={cn(input, "mt-1")}
-              defaultValue={r[`ingredients_${l}`]?.join(", ") ?? ""}
-              onBlur={(e) =>
-                set(
-                  `ingredients_${l}` as keyof DishRow,
-                  list(e.target.value) as never,
-                )
+              type="number"
+              className={input}
+              value={r.sort_order}
+              onChange={(e) =>
+                set("sort_order", Number(e.target.value))
               }
             />
           </label>
-        ))}
-      </div>
+        </section>
 
-      <fieldset>
-        <legend className="mb-2 text-xs text-muted-foreground">
-          Allergeni
-        </legend>
+        <section className="space-y-4 rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
+          <h2 className="font-display text-lg text-white">
+            Fotografia
+          </h2>
 
-        <div className="flex flex-wrap gap-2">
-          {(Object.keys(allergenLabels) as AllergenId[]).map((a) => {
-            const on = r.allergens?.includes(a);
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="h-24 w-24 overflow-hidden rounded-xl bg-[#2A3737]">
+              {r.image ? (
+                <img
+                  src={
+                    /^https?:\/\//i.test(r.image)
+                      ? r.image
+                      : supabase.storage
+                          .from("dish-photos")
+                          .getPublicUrl(r.image).data.publicUrl
+                  }
+                  alt="Anteprima piatto"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-xs text-[#999999]">
+                  Nessuna foto
+                </div>
+              )}
+            </div>
 
-            return (
-              <button
-                type="button"
-                key={a}
-                onClick={() =>
-                  set(
-                    "allergens",
-                    on
-                      ? r.allergens.filter(
-                          (x: string) => x !== a,
-                        )
-                      : [...(r.allergens || []), a],
-                  )
-                }
-                className={cn(
-                  "min-h-9 rounded-full border px-3 text-xs",
-                  on
-                    ? "border-destructive bg-destructive/15 text-destructive"
-                    : "border-border/60 text-muted-foreground",
-                )}
-              >
-                {allergenLabels[a].it}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {(Object.keys(dietLabels) as DietId[]).map((k) => (
-            <button
-              type="button"
-              key={k}
-              onClick={() => set(k, !r[k])}
+            <label
               className={cn(
-                "min-h-9 rounded-full border px-3 text-xs",
-                r[k]
-                  ? "border-sage bg-sage/15 text-sage"
-                  : "border-border/60 text-muted-foreground",
+                secondaryButton,
+                "cursor-pointer",
+                uploading && "pointer-events-none opacity-50",
               )}
             >
-              {dietLabels[k].it}
-            </button>
+              <Camera className="h-4 w-4" />
+              {uploading ? "Caricamento…" : "Carica foto"}
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void upload(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+
+            {r.image && (
+              <button
+                type="button"
+                onClick={() => set("image", null)}
+                className="text-xs text-[#FFB4AB]"
+              >
+                Rimuovi foto
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
+          <h2 className="font-display text-lg text-white">
+            Ingredienti
+          </h2>
+
+          {(["it", "en"] as const).map((language) => (
+            <label
+              key={language}
+              className="block text-[11px] text-[#B5CBC9]"
+            >
+              Ingredienti ({language.toUpperCase()})
+              <textarea
+                rows={3}
+                className={input}
+                value={
+                  r[`ingredients_${language}`]?.join(", ") ?? ""
+                }
+                onChange={(e) =>
+                  set(
+                    `ingredients_${language}`,
+                    list(e.target.value),
+                  )
+                }
+                placeholder="Separare gli ingredienti con una virgola"
+              />
+            </label>
           ))}
-        </div>
+        </section>
 
-        <label
-          className={cn(
-            "mt-3 flex items-center gap-2 rounded-md border p-3 text-sm",
-            r.allergens_checked
-              ? "border-border/40 text-title"
-              : "border-destructive/60 text-destructive",
-          )}
-        >
-          <input
-            type="checkbox"
-            checked={r.allergens_checked}
-            onChange={(e) =>
-              set("allergens_checked", e.target.checked)
-            }
-            className="h-5 w-5 accent-sage"
-          />
-          Ho verificato gli allergeni di questo piatto
-          (necessario per pubblicarlo)
-        </label>
-      </fieldset>
+        <section className="space-y-4 rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
+          <h2 className="font-display text-lg text-white">
+            Allergeni e preferenze alimentari
+          </h2>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="h-20 w-20 shrink-0 overflow-hidden rounded bg-surface-low">
-          {r.image && (
-            <img
-              src={r.image}
-              alt=""
-              className="h-full w-full object-cover"
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {(Object.keys(allergenLabels) as AllergenId[]).map(
+              (allergen) => {
+                const active = r.allergens?.includes(allergen);
+
+                return (
+                  <button
+                    type="button"
+                    key={allergen}
+                    onClick={() =>
+                      set(
+                        "allergens",
+                        active
+                          ? r.allergens.filter(
+                              (value: string) => value !== allergen,
+                            )
+                          : [...(r.allergens || []), allergen],
+                      )
+                    }
+                    className={cn(
+                      "min-h-10 rounded-lg border px-2 text-left text-[11px] transition",
+                      active
+                        ? "border-[#FFB4AB]/50 bg-[#93000A]/20 text-[#FFB4AB]"
+                        : "border-white/10 bg-[#152222] text-[#B5CBC9]",
+                    )}
+                  >
+                    {active ? "✓ " : ""}
+                    {allergenLabels[allergen].it}
+                  </button>
+                );
+              },
+            )}
+          </div>
+
+          <div className="border-t border-white/[0.07] pt-4">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-[#999999]">
+              Preferenze alimentari
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(dietLabels) as DietId[]).map((diet) => (
+                <button
+                  type="button"
+                  key={diet}
+                  onClick={() => set(diet, !r[diet])}
+                  className={cn(
+                    "min-h-9 rounded-full border px-3 text-[10px] font-semibold",
+                    r[diet]
+                      ? "border-[#D8E9AC] bg-[#D8E9AC]/15 text-[#D8E9AC]"
+                      : "border-white/10 text-[#999999]",
+                  )}
+                >
+                  {dietLabels[diet].it}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label
+            className={cn(
+              "flex items-start gap-3 rounded-xl border p-3 text-xs",
+              r.allergens_checked
+                ? "border-[#D8E9AC]/20 text-[#D7E5E5]"
+                : "border-[#FFB4AB]/40 text-[#FFB4AB]",
+            )}
+          >
+            <input
+              type="checkbox"
+              checked={r.allergens_checked}
+              onChange={(e) =>
+                set("allergens_checked", e.target.checked)
+              }
+              className="mt-0.5 h-4 w-4 accent-[#D8E9AC]"
             />
+            <span>
+              Ho verificato gli allergeni di questo piatto.
+              La conferma è necessaria per pubblicarlo.
+            </span>
+          </label>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
+          <h2 className="font-display text-lg text-white">
+            Abbinamento del sommelier
+          </h2>
+
+          {pair(
+            "Vino consigliato",
+            "sommelier_wine_it",
+            "sommelier_wine_en",
           )}
-        </div>
 
-        <label
-          className={cn(
-            "flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border/60 px-5 text-sm text-title",
-            uploading && "opacity-60",
+          {pair(
+            "Nota sull'abbinamento",
+            "sommelier_note_it",
+            "sommelier_note_en",
+            true,
           )}
-        >
-          <Camera className="h-4 w-4" />
-          {uploading ? "Caricamento…" : "Carica foto"}
+        </section>
 
-          <input
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            disabled={uploading}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) upload(f);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        <section className="space-y-4 rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
+          <h2 className="font-display text-lg text-white">
+            Nota dello chef
+          </h2>
 
-        {r.image && (
+          {pair(
+            "Nota",
+            "signature_note_it",
+            "signature_note_en",
+            true,
+          )}
+
+          {pair(
+            "Abbinamento",
+            "signature_pairing_it",
+            "signature_pairing_en",
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-white/[0.07] bg-[#132726] p-4">
+          <label className="flex items-center justify-between gap-3">
+            <span>
+              <span className="block text-sm font-semibold text-white">
+                Visibile nel menu
+              </span>
+              <span className="mt-1 block text-[11px] text-[#999999]">
+                Attiva o nascondi questo piatto ai clienti.
+              </span>
+            </span>
+
+            <input
+              type="checkbox"
+              checked={r.visible}
+              onChange={(e) => set("visible", e.target.checked)}
+              className="h-5 w-5 accent-[#D8E9AC]"
+            />
+          </label>
+        </section>
+
+        <div className="grid grid-cols-2 gap-3 pb-8">
           <button
             type="button"
-            onClick={() => set("image", null)}
-            className="text-xs text-destructive"
+            onClick={onDone}
+            className={secondaryButton}
           >
-            Rimuovi foto
+            Annulla
           </button>
-        )}
-      </div>
 
-      <label className="flex items-center gap-2 text-sm text-title">
-        <input
-          type="checkbox"
-          checked={r.visible}
-          onChange={(e) =>
-            set("visible", e.target.checked)
-          }
-          className="h-5 w-5 accent-sage"
-        />
-        Visibile nel menu
-      </label>
-
-      <label className="block text-xs text-muted-foreground">
-        Oppure indirizzo immagine (URL)
-        <input
-          className={cn(input, "mt-1")}
-          value={r.image ?? ""}
-          onChange={(e) => set("image", opt(e.target.value))}
-          placeholder="https://…"
-        />
-      </label>
-
-      <p className="border-t border-border/30 pt-4 text-xs uppercase tracking-widest text-muted-foreground">
-        Abbinamento del sommelier (facoltativo)
-      </p>
-
-      {pair(
-        "Vino / cocktail consigliato",
-        "sommelier_wine_it",
-        "sommelier_wine_en",
-      )}
-
-      {pair(
-        "Perché questo abbinamento",
-        "sommelier_note_it",
-        "sommelier_note_en",
-      )}
-
-      <p className="border-t border-border/30 pt-4 text-xs uppercase tracking-widest text-muted-foreground">
-        Nota dello chef (facoltativo)
-      </p>
-
-      {pair("Nota", "signature_note_it", "signature_note_en")}
-
-      <div className="flex gap-3 pt-2">
-        <button
-          disabled={busy}
-          className="min-h-11 rounded-full bg-sage px-6 text-sm font-semibold text-sage-foreground disabled:opacity-60"
-        >
-          Salva
-        </button>
-
-        <button
-          type="button"
-          onClick={onDone}
-          className="min-h-11 rounded-full border border-border/60 px-6 text-sm text-title"
-        >
-          Annulla
-        </button>
-      </div>
-    </form>
+          <button
+            disabled={busy || uploading}
+            className={primaryButton}
+          >
+            <Check className="h-4 w-4" />
+            {busy ? "Salvataggio…" : "Salva piatto"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
