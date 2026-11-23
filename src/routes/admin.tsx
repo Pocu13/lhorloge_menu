@@ -1,3 +1,4 @@
+
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -10,8 +11,10 @@ import {
   Eye,
   FileUp,
   LogOut,
+  Moon,
   Pencil,
   Plus,
+  Sun,
   Trash2,
   UtensilsCrossed,
 } from "lucide-react";
@@ -374,21 +377,24 @@ function Editor() {
         </div>
 
         {/* TIPI MENU */}
-        <section className="mb-8">
-          <h2 className="mb-5 font-display text-2xl font-semibold text-white">
+        <div className="mb-1 flex items-center justify-between px-1 pt-2">
+          <h2 className="font-display text-[24px] font-semibold leading-tight text-white">
             Tipi Menù
           </h2>
+        </div>
 
-          <div className="rounded-2xl border border-white/[0.04] bg-[#111E1E] p-4 sm:p-5">
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#081616] p-1">
+        <section className="mb-8 flex flex-col space-y-4 rounded-2xl bg-[#111E1E] p-4 shadow-sm">
+          {/* SELEZIONE TIPO MENU */}
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 overflow-x-auto pb-1">
               <button
                 type="button"
                 onClick={() => setSection("dishes")}
                 className={cn(
-                  "min-h-11 rounded-full px-2 text-[10px] font-bold uppercase tracking-wider transition sm:text-xs",
+                  "shrink-0 rounded-full px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.05em] transition-all active:scale-95",
                   section === "dishes"
-                    ? "bg-[#D8E9AC] text-[#0B1818]"
-                    : "text-[#B5CBC9] hover:bg-[#152222]",
+                    ? "bg-[#D8E9AC] text-[#5B6938] shadow-[0_2px_12px_rgba(216,233,172,0.2)]"
+                    : "bg-[#152222] text-[#C6C8B9] hover:bg-[#1F2C2C] hover:text-white",
                 )}
               >
                 Degustazione a Portate
@@ -398,48 +404,76 @@ function Editor() {
                 type="button"
                 onClick={() => setSection("menus")}
                 className={cn(
-                  "min-h-11 rounded-full px-2 text-[10px] font-bold uppercase tracking-wider transition sm:text-xs",
+                  "shrink-0 rounded-full px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.05em] transition-all active:scale-95",
                   section === "menus"
-                    ? "bg-[#D8E9AC] text-[#0B1818]"
-                    : "text-[#B5CBC9] hover:bg-[#152222]",
+                    ? "bg-[#D8E9AC] text-[#5B6938] shadow-[0_2px_12px_rgba(216,233,172,0.2)]"
+                    : "bg-[#152222] text-[#C6C8B9] hover:bg-[#1F2C2C] hover:text-white",
                 )}
               >
-                Gestione Altri Menù
+                Carta Stagionale
               </button>
             </div>
+          </div>
 
-            {section === "dishes" && (
-              <div className="mt-5">
-                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-[#B5CBC9]">
-                  Riepilogo disponibilità
-                </p>
+          {/* FASCE ORARIE - SOLO RIFERIMENTO VISIVO */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#C6C8B9]">
+              Fasce Orarie di Validità
+            </label>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-[#152222] p-3">
-                    <p className="text-xs text-[#999999]">
-                      Piatti totali
-                    </p>
+            <div className="grid grid-cols-1 gap-2">
+              {/* CENA */}
+              <div className="flex items-center justify-between rounded-xl bg-[#152222] p-3">
+                <div className="flex items-center gap-2.5">
+                  <Moon className="h-5 w-5 text-[#909285]" />
 
-                    <p className="mt-1 font-display text-2xl text-white">
-                      {data.length}
-                    </p>
-                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[13px] font-medium text-[#D7E5E5]">
+                      Cena
+                    </span>
 
-                  <div className="rounded-xl bg-[#152222] p-3">
-                    <p className="text-xs text-[#999999]">
-                      Visibili ai clienti
-                    </p>
-
-                    <p className="mt-1 font-display text-2xl text-[#D8E9AC]">
-                      {totalVisible}
-                    </p>
+                    <span className="text-[11px] text-[#C6C8B9]">
+                      19:00 — 00:00 (Tutti i giorni)
+                    </span>
                   </div>
                 </div>
+
+                <span
+                  aria-label="Attivazione automatica disabilitata"
+                  className="relative inline-flex h-5 w-9 shrink-0 rounded-full bg-[#2A3737]"
+                >
+                  <span className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-[#45483D]" />
+                </span>
               </div>
-            )}
+
+              {/* DOMENICA A PRANZO */}
+              <div className="flex items-center justify-between rounded-xl bg-[#152222] p-3">
+                <div className="flex items-center gap-2.5">
+                  <Sun className="h-5 w-5 text-[#909285]" />
+
+                  <div className="flex flex-col">
+                    <span className="text-[13px] font-medium text-[#D7E5E5]">
+                      Domenica a Pranzo
+                    </span>
+
+                    <span className="text-[11px] text-[#C6C8B9]">
+                      12:30 — 15:00 (Solo Festivi)
+                    </span>
+                  </div>
+                </div>
+
+                <span
+                  aria-label="Attivazione automatica disabilitata"
+                  className="relative inline-flex h-5 w-9 shrink-0 rounded-full bg-[#2A3737]"
+                >
+                  <span className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-[#45483D]" />
+                </span>
+              </div>
+            </div>
           </div>
         </section>
-                {/* GESTIONE ALTRI MENU */}
+
+        {/* GESTIONE ALTRI MENU */}
         {section === "menus" ? (
           <AdminMenus />
         ) : (
@@ -701,7 +735,8 @@ function Editor() {
                 })}
               </div>
             )}
-                        {/* NUOVA CATEGORIA */}
+
+            {/* NUOVA CATEGORIA */}
             <button
               type="button"
               onClick={() =>
