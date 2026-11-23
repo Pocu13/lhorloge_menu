@@ -1,4 +1,3 @@
-
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -14,7 +13,9 @@ import {
   Pencil,
   Plus,
   Trash2,
+  UtensilsCrossed,
 } from "lucide-react";
+
 import { MenuImporter } from "../lib/menu-importer";
 import { supabase } from "@/integrations/supabase/client";
 import { allDishesQuery, type DishRow } from "@/lib/menu-api";
@@ -39,13 +40,13 @@ export const Route = createFileRoute("/admin")({
 });
 
 const input =
-  "mt-1 w-full rounded-xl border border-white/10 bg-[#132726] px-3.5 py-3 text-sm text-[#EEEEEE] placeholder:text-[#999999] outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
+  "mt-1 w-full rounded-xl border border-white/10 bg-[#152222] px-3.5 py-3 text-sm text-[#EEEEEE] placeholder:text-[#999999] outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
 
 const primaryButton =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#D8E9AC] px-5 text-xs font-bold uppercase tracking-wider text-[#0B1818] shadow-[0_4px_20px_rgba(216,233,172,0.16)] transition active:scale-[0.98] disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#D8E9AC] px-5 text-xs font-bold uppercase tracking-wider text-[#0B1818] shadow-[0_4px_20px_rgba(216,233,172,0.16)] transition active:scale-[0.98] disabled:opacity-50";
 
 const secondaryButton =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[rgba(216,233,172,0.2)] bg-[#132726] px-4 text-xs font-semibold uppercase tracking-wider text-[#EEEEEE] transition hover:border-[#D8E9AC] active:scale-[0.98]";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/[0.07] bg-[#1F2C2C] px-4 text-xs font-semibold uppercase tracking-wider text-[#D7E5E5] transition hover:border-[#D8E9AC]/40";
 
 const empty: DishRow = {
   id: "",
@@ -114,7 +115,7 @@ function AdminPage() {
 
   if (state === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0B1818] text-[#D8E9AC]">
+      <div className="flex min-h-screen items-center justify-center bg-[#081616] text-[#D8E9AC]">
         Caricamento…
       </div>
     );
@@ -159,10 +160,10 @@ function Login() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0B1818] px-5">
+    <main className="flex min-h-screen items-center justify-center bg-[#081616] px-5">
       <form
         onSubmit={submit}
-        className="w-full max-w-sm space-y-6 rounded-2xl border border-white/10 bg-[#132726] p-7"
+        className="w-full max-w-sm space-y-6 rounded-2xl border border-white/[0.08] bg-[#111E1E] p-7"
       >
         <div className="text-center">
           <img
@@ -170,13 +171,17 @@ function Login() {
             alt="L'Horloge"
             className="mx-auto mb-4 h-16 w-16 object-contain"
           />
-          <h1 className="font-display text-3xl text-white">L'Horloge</h1>
+
+          <h1 className="font-display text-3xl text-white">
+            L'Horloge
+          </h1>
+
           <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-[#D8E9AC]">
             Area amministrazione
           </p>
         </div>
 
-        <label className="block text-xs text-[#999999]">
+        <label className="block text-xs text-[#B5CBC9]">
           Email
           <input
             className={input}
@@ -187,7 +192,7 @@ function Login() {
           />
         </label>
 
-        <label className="block text-xs text-[#999999]">
+        <label className="block text-xs text-[#B5CBC9]">
           Password
           <input
             type="password"
@@ -198,7 +203,10 @@ function Login() {
           />
         </label>
 
-        <button disabled={busy} className={cn(primaryButton, "w-full")}>
+        <button
+          disabled={busy}
+          className={cn(primaryButton, "w-full")}
+        >
           {busy ? "Accesso…" : "Accedi"}
         </button>
       </form>
@@ -217,6 +225,7 @@ function Editor() {
 
   const [importing, setImporting] = useState(false);
   const [section, setSection] = useState<"dishes" | "menus">("dishes");
+
   const [expanded, setExpanded] = useState<Record<string, boolean>>(
     Object.fromEntries(categories.map((c) => [c.id, true])),
   );
@@ -238,6 +247,7 @@ function Editor() {
 
     toast.success("Piatto eliminato");
     await qc.invalidateQueries({ queryKey: ["dishes"] });
+
     return true;
   };
 
@@ -311,16 +321,20 @@ function Editor() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B1818] text-[#D7E5E5]">
+    <div className="min-h-screen bg-[#081616] font-body text-[#D7E5E5]">
+      {/* HEADER */}
       <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#081616]/95 backdrop-blur-xl">
         <div className="mx-auto flex h-[68px] max-w-5xl items-center justify-between px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-3">
+          <Link to="/" className="flex min-w-0 items-center gap-3">
             <img
               src="/logo.png"
               alt="L'Horloge"
-              className="h-9 w-9 object-contain"
+              className="h-9 w-9 shrink-0 object-contain"
             />
-            <span className="font-display text-xl text-white">L'horloge</span>
+
+            <span className="font-display text-xl text-white">
+              L'horloge
+            </span>
           </Link>
 
           <button
@@ -329,73 +343,83 @@ function Editor() {
               window.location.reload();
             }}
             aria-label="Esci"
-            className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#0B1818] transition hover:bg-[#D8E9AC]"
+            title="Esci"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#D8E9AC] text-[#0B1818] transition hover:scale-105"
           >
             <LogOut className="h-4 w-4" />
           </button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:px-6">
-        <div className="mb-8 grid grid-cols-2 gap-2">
+      <main className="mx-auto max-w-5xl px-4 pb-24 pt-4 sm:px-6 sm:pt-6">
+        {/* AZIONI PRINCIPALI */}
+        <div className="mb-8 grid grid-cols-2 gap-2 sm:gap-3">
           <button
+            type="button"
             onClick={() => window.open("/", "_blank")}
             className={secondaryButton}
           >
-            <Eye className="h-4 w-4 text-[#B5CBC9]" />
+            <Eye className="h-4 w-4 shrink-0 text-[#B5CBC9]" />
             Anteprima
           </button>
 
           <button
+            type="button"
             onClick={() => setImporting(true)}
             className={secondaryButton}
           >
-            <FileUp className="h-4 w-4 text-[#D8E9AC]" />
+            <FileUp className="h-4 w-4 shrink-0 text-[#D8E9AC]" />
             Carica PDF
           </button>
         </div>
 
+        {/* TIPI MENU */}
         <section className="mb-8">
           <h2 className="mb-5 font-display text-2xl font-semibold text-white">
             Tipi Menù
           </h2>
 
-          <div className="rounded-2xl bg-[#111E1E] p-4 sm:p-5">
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#0B1818] p-1">
+          <div className="rounded-2xl border border-white/[0.04] bg-[#111E1E] p-4 sm:p-5">
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#081616] p-1">
               <button
+                type="button"
                 onClick={() => setSection("dishes")}
                 className={cn(
-                  "min-h-10 rounded-full px-3 text-[10px] font-bold uppercase tracking-wider transition",
+                  "min-h-11 rounded-full px-2 text-[10px] font-bold uppercase tracking-wider transition sm:text-xs",
                   section === "dishes"
                     ? "bg-[#D8E9AC] text-[#0B1818]"
-                    : "text-[#999999]",
+                    : "text-[#B5CBC9] hover:bg-[#152222]",
                 )}
               >
-                Gestione piatti
+                Degustazione a Portate
               </button>
 
               <button
+                type="button"
                 onClick={() => setSection("menus")}
                 className={cn(
-                  "min-h-10 rounded-full px-3 text-[10px] font-bold uppercase tracking-wider transition",
+                  "min-h-11 rounded-full px-2 text-[10px] font-bold uppercase tracking-wider transition sm:text-xs",
                   section === "menus"
                     ? "bg-[#D8E9AC] text-[#0B1818]"
-                    : "text-[#999999]",
+                    : "text-[#B5CBC9] hover:bg-[#152222]",
                 )}
               >
-                Gestione menu
+                Gestione Altri Menù
               </button>
             </div>
 
             {section === "dishes" && (
               <div className="mt-5">
-                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-[#D8E9AC]">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-[#B5CBC9]">
                   Riepilogo disponibilità
                 </p>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl bg-[#152222] p-3">
-                    <p className="text-xs text-[#999999]">Piatti totali</p>
+                    <p className="text-xs text-[#999999]">
+                      Piatti totali
+                    </p>
+
                     <p className="mt-1 font-display text-2xl text-white">
                       {data.length}
                     </p>
@@ -405,6 +429,7 @@ function Editor() {
                     <p className="text-xs text-[#999999]">
                       Visibili ai clienti
                     </p>
+
                     <p className="mt-1 font-display text-2xl text-[#D8E9AC]">
                       {totalVisible}
                     </p>
@@ -414,17 +439,19 @@ function Editor() {
             )}
           </div>
         </section>
-
+                {/* GESTIONE ALTRI MENU */}
         {section === "menus" ? (
           <AdminMenus />
         ) : (
           <>
+            {/* TITOLO SEZIONE */}
             <section className="mb-7">
               <div className="mb-2 flex items-start justify-between gap-3">
-                <div>
-                  <h1 className="font-display text-2xl font-semibold text-white">
+                <div className="min-w-0">
+                  <h1 className="font-display text-2xl font-semibold text-white sm:text-3xl">
                     Degustazione a Portate
                   </h1>
+
                   <p className="mt-1 text-xs leading-5 text-[#B5CBC9]">
                     Gestisci le sezioni e i piatti del percorso.
                   </p>
@@ -435,39 +462,44 @@ function Editor() {
                 </span>
               </div>
 
-              <div className="mt-6 flex items-center justify-between gap-3">
+              <div className="mt-7 flex items-center justify-between gap-3">
                 <button
+                  type="button"
                   onClick={toggleAll}
-                  className="inline-flex min-h-9 items-center gap-2 rounded-full bg-[#132726] px-4 text-[10px] font-bold uppercase tracking-wider text-[#D8E9AC]"
+                  className="inline-flex min-h-9 items-center gap-2 rounded-full bg-[#152222] px-4 text-[10px] font-bold uppercase tracking-wider text-[#D8E9AC] transition hover:bg-[#1F2C2C]"
                 >
                   {allOpen ? (
                     <ChevronUp className="h-3.5 w-3.5" />
                   ) : (
                     <ChevronDown className="h-3.5 w-3.5" />
                   )}
+
                   {allOpen ? "Comprimi tutto" : "Espandi tutto"}
                 </button>
 
-                <span className="rounded-full bg-[#132726] px-3 py-2 text-[10px] font-semibold text-[#D8E9AC]">
+                <span className="rounded-full bg-[#1F2C2C] px-3 py-2 text-[10px] font-semibold text-[#D8E9AC]">
                   {totalVisible} disponibili
                 </span>
               </div>
             </section>
 
+            {/* AVVISO ALLERGENI */}
             {toCheck > 0 && (
               <div className="mb-5 flex items-start gap-2 rounded-xl border border-[#FFB4AB]/30 bg-[#93000A]/10 p-3 text-xs text-[#FFB4AB]">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+
                 <p>
-                  {toCheck} piatti hanno allergeni da verificare. Controllali
-                  prima di renderli visibili ai clienti.
+                  {toCheck} piatti hanno allergeni da verificare.
+                  Controllali prima di renderli visibili ai clienti.
                 </p>
               </div>
             )}
 
+            {/* CATEGORIE E PIATTI */}
             {isLoading ? (
-              <p className="py-10 text-center text-sm text-[#999999]">
+              <div className="rounded-2xl bg-[#111E1E] py-12 text-center text-sm text-[#999999]">
                 Caricamento piatti…
-              </p>
+              </div>
             ) : (
               <div className="space-y-4">
                 {categories.map((category) => {
@@ -482,8 +514,10 @@ function Editor() {
                       key={category.id}
                       className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111E1E]"
                     >
+                      {/* INTESTAZIONE CATEGORIA */}
                       <div className="flex items-center gap-2 px-3 py-3.5 sm:px-4">
                         <button
+                          type="button"
                           onClick={() => toggleSection(category.id)}
                           className="flex min-w-0 flex-1 items-center gap-3 text-left"
                         >
@@ -499,13 +533,14 @@ function Editor() {
                             {category.label.it}
                           </span>
 
-                          <span className="rounded-full bg-[#152222] px-2.5 py-1 text-[9px] uppercase tracking-wider text-[#B5CBC9]">
+                          <span className="shrink-0 rounded-full bg-[#152222] px-2.5 py-1 text-[9px] uppercase tracking-wider text-[#B5CBC9]">
                             {dishes.length}{" "}
                             {dishes.length === 1 ? "piatto" : "piatti"}
                           </span>
                         </button>
 
                         <button
+                          type="button"
                           onClick={() =>
                             setEdit({
                               row: {
@@ -518,12 +553,14 @@ function Editor() {
                             })
                           }
                           aria-label={`Aggiungi piatto a ${category.label.it}`}
-                          className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 text-[#D8E9AC] transition hover:border-[#D8E9AC]"
+                          title="Aggiungi piatto"
+                          className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 text-[#D8E9AC] transition hover:border-[#D8E9AC] hover:bg-[#152222]"
                         >
                           <Plus className="h-4 w-4" />
                         </button>
                       </div>
 
+                      {/* CONTENUTO CATEGORIA */}
                       {isExpanded && (
                         <div className="space-y-3 px-3 pb-3 sm:px-4">
                           {dishes.length === 0 ? (
@@ -539,8 +576,9 @@ function Editor() {
                                   !r.visible && "opacity-55",
                                 )}
                               >
-                                <div className="flex gap-3">
-                                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#2A3737]">
+                                {/* INFORMAZIONI PIATTO */}
+                                <div className="flex min-w-0 gap-3">
+                                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#2A3737] sm:h-24 sm:w-24">
                                     {r.image ? (
                                       <img
                                         src={
@@ -555,14 +593,17 @@ function Editor() {
                                         className="h-full w-full object-cover"
                                       />
                                     ) : (
-                                      <div className="flex h-full items-center justify-center text-xs text-[#999999]">
-                                        img
+                                      <div className="flex h-full flex-col items-center justify-center gap-1 text-[#999999]">
+                                        <UtensilsCrossed className="h-5 w-5" />
+                                        <span className="text-[9px]">
+                                          img
+                                        </span>
                                       </div>
                                     )}
                                   </div>
 
                                   <div className="min-w-0 flex-1">
-                                    <h3 className="font-display text-[15px] font-semibold leading-snug text-white">
+                                    <h3 className="font-display text-[15px] font-semibold leading-snug text-white sm:text-base">
                                       {r.name_it}
                                     </h3>
 
@@ -575,8 +616,12 @@ function Editor() {
                                     </p>
 
                                     <button
+                                      type="button"
                                       onClick={() =>
-                                        window.open(`/piatto/${r.id}`, "_blank")
+                                        window.open(
+                                          `/piatto/${r.id}`,
+                                          "_blank",
+                                        )
                                       }
                                       className="mt-1 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[#D8E9AC]"
                                     >
@@ -586,14 +631,16 @@ function Editor() {
                                   </div>
                                 </div>
 
-                                <div className="mt-3 flex items-center justify-between border-t border-white/[0.06] pt-3">
+                                {/* AZIONI PIATTO */}
+                                <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
                                   <button
+                                    type="button"
                                     onClick={() => toggle(r)}
-                                    className="flex min-h-8 items-center gap-2 text-[10px] text-[#D7E5E5]"
+                                    className="flex min-h-8 min-w-0 items-center gap-2 text-[10px] text-[#D7E5E5]"
                                   >
                                     <span
                                       className={cn(
-                                        "relative h-5 w-9 rounded-full transition",
+                                        "relative h-5 w-9 shrink-0 rounded-full transition",
                                         r.visible
                                           ? "bg-[#D8E9AC]"
                                           : "bg-[#45483D]",
@@ -608,24 +655,31 @@ function Editor() {
                                         )}
                                       />
                                     </span>
-                                    Disponibile al servizio
+
+                                    <span className="truncate">
+                                      Disponibile al servizio
+                                    </span>
                                   </button>
 
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex shrink-0 items-center gap-2">
                                     <button
+                                      type="button"
                                       onClick={() =>
                                         setEdit({ row: r, isNew: false })
                                       }
                                       aria-label="Modifica piatto"
+                                      title="Modifica piatto"
                                       className="grid h-9 w-9 place-items-center rounded-xl bg-[#1F2C2C] text-[#B5CBC9] transition hover:text-[#D8E9AC]"
                                     >
                                       <Pencil className="h-4 w-4" />
                                     </button>
 
                                     <button
+                                      type="button"
                                       onClick={() => void remove(r)}
                                       aria-label="Elimina piatto"
-                                      className="grid h-9 w-9 place-items-center rounded-xl text-[#B5CBC9] transition hover:text-[#FFB4AB]"
+                                      title="Elimina piatto"
+                                      className="grid h-9 w-9 place-items-center rounded-xl text-[#B5CBC9] transition hover:bg-[#3A2022] hover:text-[#FFB4AB]"
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </button>
@@ -647,14 +701,18 @@ function Editor() {
                 })}
               </div>
             )}
-
+                        {/* NUOVA CATEGORIA */}
             <button
+              type="button"
               onClick={() =>
                 toast.info(
                   "La creazione di nuove categorie richiede prima l'aggiornamento del database. La realizzeremo nella fase successiva.",
                 )
               }
-              className={cn(primaryButton, "mt-8 min-h-12 w-full")}
+              className={cn(
+                primaryButton,
+                "mt-8 min-h-12 w-full rounded-xl",
+              )}
             >
               <Plus className="h-4 w-4" />
               Nuova categoria
