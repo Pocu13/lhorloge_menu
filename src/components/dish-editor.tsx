@@ -14,6 +14,7 @@ import {
   X,
   AlertTriangle,
   Image as ImageIcon,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,9 +22,7 @@ import type { DishRow } from "@/lib/menu-api";
 import {
   allergenLabels,
   categories,
-  dietLabels,
   type AllergenId,
-  type DietId,
 } from "@/lib/menu-data";
 
 type Props = {
@@ -72,10 +71,10 @@ const certifications = [
 ];
 
 const input =
-  "w-full rounded-xl border border-white/10 bg-[#152222] px-3.5 py-3 text-sm text-[#EEEEEE] outline-none transition placeholder:text-[#777F7D] focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
+  "w-full min-w-0 rounded-xl border border-white/10 bg-[#152222] px-3.5 py-3 text-base text-[#EEEEEE] outline-none transition placeholder:text-[#777F7D] focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
 
 const label =
-  "mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.13em] text-[#B5CBC9]";
+  "mb-2 block text-[10px] font-semibold uppercase tracking-[0.13em] text-[#B5CBC9]";
 
 const card = "rounded-xl bg-[#111E1E] p-4 shadow-sm";
 
@@ -88,7 +87,10 @@ const buttonSecondary =
 function imageUrl(value: string | null) {
   if (!value) return "";
   if (/^https?:\/\//i.test(value)) return value;
-  return supabase.storage.from("dish-photos").getPublicUrl(value).data.publicUrl;
+
+  return supabase.storage
+    .from("dish-photos")
+    .getPublicUrl(value).data.publicUrl;
 }
 
 export function DishEditor({
@@ -106,13 +108,26 @@ export function DishEditor({
   const [previewModal, setPreviewModal] = useState(false);
 
   const [ingredientName, setIngredientName] = useState("");
-  const [ingredientCategory, setIngredientCategory] = useState(ingredientCategories[0]);
+  const [ingredientCategory, setIngredientCategory] = useState(
+    ingredientCategories[0],
+  );
   const [ingredientDosage, setIngredientDosage] = useState("");
   const [ingredientOrigin, setIngredientOrigin] = useState("");
-  const [ingredientCertification, setIngredientCertification] = useState("Nessuna");
-  const [ingredientAllergens, setIngredientAllergens] = useState<AllergenId[]>([]);
+  const [ingredientCertification, setIngredientCertification] =
+    useState("Nessuna");
+  const [ingredientAllergens, setIngredientAllergens] = useState<
+    AllergenId[]
+  >([]);
 
-  const [tempAllergens, setTempAllergens] = useState<AllergenId[]>(r.allergens as AllergenId[]);
+  const [tempAllergens, setTempAllergens] = useState<AllergenId[]>(
+    (initial.allergens ?? []) as AllergenId[],
+  );
+
+  // Questi due interruttori sono solamente grafici:
+  // non vengono salvati perché al momento non esistono campi DB dedicati.
+  const [qrEnabled, setQrEnabled] = useState(true);
+  const [stockEnabled, setStockEnabled] = useState(false);
+
   const photoInput = useRef<HTMLInputElement>(null);
 
   const set = <K extends keyof DishRow>(key: K, value: DishRow[K]) => {
@@ -130,9 +145,8 @@ export function DishEditor({
     );
   };
 
-  const toggleDiet = (id: DietId) => {
-    set(id, !r[id]);
-  };
+  const toggleQr = () => setQrEnabled((current) => !current);
+  const toggleStock = () => setStockEnabled((current) => !current);
 
   const uploadPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -175,17 +189,25 @@ export function DishEditor({
       return;
     }
 
-    setR((current) => ({
-      ...current,
-      ingredients_it: [...(current.ingredients_it ?? []), name],
-      ingredients_en: [...(current.ingredients_en ?? []), name],
-      allergens: Array.from(
+    setR((current) => {
+      const updatedAllergens = Array.from(
         new Set([
-          ...(current.allergens ?? []),
+          ...((current.allergens ?? []) as AllergenId[]),
           ...ingredientAllergens,
         ]),
-      ),
-    }));
+      );
+
+      return {
+        ...current,
+        ingredients_it: [...(current.ingredients_it ?? []), name],
+        ingredients_en: [...(current.ingredients_en ?? []), name],
+        allergens: updatedAllergens,
+      };
+    });
+
+    setTempAllergens((current) =>
+      Array.from(new Set([...current, ...ingredientAllergens])),
+    );
 
     setIngredientModal(false);
     setIngredientName("");
@@ -200,8 +222,12 @@ export function DishEditor({
   const removeIngredient = (index: number) => {
     setR((current) => ({
       ...current,
-      ingredients_it: (current.ingredients_it ?? []).filter((_, i) => i !== index),
-      ingredients_en: (current.ingredients_en ?? []).filter((_, i) => i !== index),
+      ingredients_it: (current.ingredients_it ?? []).filter(
+        (_, i) => i !== index,
+      ),
+      ingredients_en: (current.ingredients_en ?? []).filter(
+        (_, i) => i !== index,
+      ),
     }));
   };
 
@@ -217,7 +243,7 @@ export function DishEditor({
 
     const payload = {
       ...r,
-      allergens: tempAllergens,
+      allergens: r.allergens ?? [],
       id: isNew
         ? r.name_it
             .toLowerCase()
@@ -250,23 +276,25 @@ export function DishEditor({
     englishKey: keyof DishRow,
     multiline = false,
   ) => (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {[
         { language: "IT", key: italianKey },
         { language: "EN", key: englishKey },
       ].map(({ language, key }) => (
-        <label className="block text-[11px] text-[#B5CBC9]" key={language}>
-          {title} ({language})
+        <label className="block min-w-0" key={language}>
+          <span className={label}>
+            {title} ({language})
+          </span>
           {multiline ? (
             <textarea
-              rows={4}
-              className={`${input} mt-1 resize-y leading-relaxed`}
+              rows={3}
+              className={`${input} resize-y leading-relaxed`}
               value={String(r[key] ?? "")}
               onChange={(event) => set(key, event.target.value as never)}
             />
           ) : (
             <input
-              className={`${input} mt-1`}
+              className={input}
               value={String(r[key] ?? "")}
               onChange={(event) => set(key, event.target.value as never)}
             />
@@ -276,9 +304,30 @@ export function DishEditor({
     </div>
   );
 
+  const Toggle = ({
+    checked,
+    onChange,
+  }: {
+    checked: boolean;
+    onChange: () => void;
+  }) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      className={`flex h-7 w-12 shrink-0 items-center rounded-full p-1 transition ${
+        checked ? "justify-end bg-[#D8E9AC]" : "justify-start bg-[#45483D]"
+      }`}
+    >
+      <span className="h-5 w-5 rounded-full bg-[#0B1818] shadow" />
+    </button>
+  );
+
   return (
-    <div className="min-h-screen bg-[#0B1818] pb-28 font-body text-[#D7E5E5]">
-      <header className="fixed left-0 right-0 top-0 z-40 border-b border-white/[0.06] bg-[#081616]/90 pt-[env(safe-area-inset-top)] shadow-lg backdrop-blur-xl">
+    <div className="min-h-screen bg-[#081616] pb-10 font-body text-[#D7E5E5]">
+      {/* HEADER */}
+      <header className="fixed left-0 right-0 top-0 z-40 border-b border-white/[0.06] bg-[#081616]/95 pt-[env(safe-area-inset-top)] shadow-lg backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-lg items-center gap-3 px-4">
           <button
             type="button"
@@ -288,18 +337,26 @@ export function DishEditor({
           >
             <ArrowLeft size={21} />
           </button>
+
           <h1 className="min-w-0 flex-1 truncate font-display text-base font-semibold text-white">
             {isNew ? "Nuovo Piatto" : "Modifica Piatto"}
           </h1>
         </div>
       </header>
 
-      <form onSubmit={save} className="mx-auto flex max-w-lg flex-col gap-6 px-3 pb-8 pt-20">
-        {/* Fotografia */}
+      <form
+        onSubmit={save}
+        className="mx-auto flex max-w-lg flex-col gap-4 px-3 pb-10 pt-20"
+      >
+        {/* FOTOGRAFIA */}
         <section className="rounded-xl bg-[#111E1E] p-3 shadow-md">
-          <div className="group relative h-64 overflow-hidden rounded-lg bg-[#20302F]">
+          <div className="group relative h-48 overflow-hidden rounded-lg bg-[#20302F] sm:h-64">
             {photo ? (
-              <img src={photo} alt={r.name_it} className="h-full w-full object-cover" />
+              <img
+                src={photo}
+                alt={r.name_it}
+                className="h-full w-full object-cover"
+              />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-2 text-[#89918E]">
                 <ImageIcon size={32} />
@@ -313,24 +370,26 @@ export function DishEditor({
               <button
                 type="button"
                 onClick={() => photoInput.current?.click()}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#20302F]/95 px-2 py-2 text-[11px] font-semibold text-white backdrop-blur"
+                className="flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#20302F]/95 px-2 py-2 text-[11px] font-semibold text-white backdrop-blur"
               >
                 <Camera size={15} className="text-[#D8E9AC]" />
                 Foto
               </button>
+
               <button
                 type="button"
                 onClick={() => setPreviewModal(true)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#D8E9AC] px-2 py-2 text-[11px] font-semibold text-[#0B1818]"
+                className="flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#D8E9AC] px-2 py-2 text-[11px] font-semibold text-[#0B1818]"
               >
                 <Eye size={15} />
                 Anteprima
               </button>
+
               <button
                 type="button"
                 onClick={() => photoInput.current?.click()}
-                aria-label="Sostituisci o ritaglia fotografia"
-                className="rounded-lg bg-[#20302F]/95 px-3 py-2 text-white"
+                aria-label="Sostituisci fotografia"
+                className="grid min-h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#20302F]/95 text-white"
               >
                 <Crop size={15} />
               </button>
@@ -352,13 +411,13 @@ export function DishEditor({
           )}
         </section>
 
-        {/* Informazioni principali */}
+        {/* INFORMAZIONI PRINCIPALI */}
         <section className={`${card} space-y-4`}>
           <h2 className="font-display text-base font-semibold text-white">
             Informazioni Principali
           </h2>
 
-          <label>
+          <label className="block">
             <span className={label}>Nome del Piatto</span>
             <input
               className={input}
@@ -368,10 +427,7 @@ export function DishEditor({
             />
           </label>
 
-          {pairedFields("Nome", "name_it", "name_en")}
-          {pairedFields("Etichetta", "tag_it", "tag_en")}
-
-          <label>
+          <label className="block">
             <span className={label}>Categoria</span>
             <div className="relative">
               <select
@@ -385,18 +441,22 @@ export function DishEditor({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-3.5 text-[#B5CBC9]" size={18} />
+
+              <ChevronDown
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#B5CBC9]"
+                size={18}
+              />
             </div>
           </label>
 
           <div className="rounded-lg bg-[#152222] p-3">
-            <label>
+            <label className="block">
               <span className={label}>Prezzo Carta (€)</span>
               <input
                 type="number"
                 min="0"
                 step="0.50"
-                className="w-full bg-transparent font-display text-xl font-bold text-[#D8E9AC] outline-none"
+                className="w-full bg-transparent font-display text-2xl font-bold text-[#D8E9AC] outline-none"
                 value={r.price}
                 onChange={(event) => set("price", Number(event.target.value))}
               />
@@ -405,43 +465,43 @@ export function DishEditor({
           </div>
 
           <div>
-            <span className={label}>Descrizione per il Cliente (IT)</span>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className={label}>Descrizione per il Cliente</span>
+              <span className="shrink-0 text-[10px] text-[#89918E]">
+                {(r.description_it ?? "").length} caratteri
+              </span>
+            </div>
+
             <textarea
               rows={4}
               className={`${input} resize-y leading-relaxed`}
-              value={r.description_it}
+              value={r.description_it ?? ""}
               onChange={(event) => set("description_it", event.target.value)}
+              placeholder="Descrivi il piatto per i tuoi clienti..."
             />
-          </div>
 
-          <div>
-            <span className={label}>Descrizione per il Cliente (EN)</span>
-            <textarea
-              rows={4}
-              className={`${input} resize-y leading-relaxed`}
-              value={r.description_en}
-              onChange={(event) => set("description_en", event.target.value)}
-            />
+            <button
+              type="button"
+              onClick={() =>
+                toast.info(
+                  "La funzione di miglioramento con AI sarà disponibile in una prossima versione.",
+                )
+              }
+              className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#D8E9AC]/20 bg-[#152222] px-3 py-2 text-xs font-semibold text-[#D8E9AC] transition hover:bg-[#20302F]"
+            >
+              <Sparkles size={15} />
+              Migliora con AI
+            </button>
           </div>
-
-          <label>
-            <span className={label}>Ordine di visualizzazione</span>
-            <input
-              type="number"
-              className={input}
-              value={r.sort_order}
-              onChange={(event) => set("sort_order", Number(event.target.value))}
-            />
-          </label>
         </section>
 
-        {/* Ingredienti */}
+        {/* INGREDIENTI */}
         <section className={`${card} space-y-3`}>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h2 className="font-display text-base font-semibold text-white">
               Ingredienti
             </h2>
-            <span className="text-[11px] font-semibold text-[#B5CBC9]">
+            <span className="shrink-0 text-[11px] font-semibold text-[#B5CBC9]">
               {ingredients.length} Componenti
             </span>
           </div>
@@ -450,19 +510,20 @@ export function DishEditor({
             {ingredients.map((ingredient, index) => (
               <div
                 key={`${ingredient}-${index}`}
-                className="flex items-center justify-between gap-3 rounded-lg bg-[#152222] px-3 py-3"
+                className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-[#152222] px-3 py-3"
               >
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="text-[#89918E]">⠿</span>
+                  <span className="shrink-0 text-[#89918E]">⠿</span>
                   <span className="truncate text-xs font-semibold text-white">
                     {ingredient}
                   </span>
                 </div>
+
                 <button
                   type="button"
                   onClick={() => removeIngredient(index)}
                   aria-label={`Rimuovi ${ingredient}`}
-                  className="shrink-0 text-[#B5CBC9] transition hover:text-[#FFB4AB]"
+                  className="shrink-0 p-1 text-[#B5CBC9] transition hover:text-[#FFB4AB]"
                 >
                   <X size={17} />
                 </button>
@@ -473,22 +534,18 @@ export function DishEditor({
           <button
             type="button"
             onClick={() => setIngredientModal(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#20302F] py-3 text-xs font-semibold text-[#D8E9AC] transition hover:bg-[#2A3D3B]"
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#20302F] py-3 text-xs font-semibold text-[#D8E9AC] transition hover:bg-[#2A3D3B]"
           >
             <Plus size={17} />
             Aggiungi Ingrediente
           </button>
-
-          <p className="text-[10px] leading-relaxed text-[#89918E]">
-            L'elenco degli ingredienti viene salvato nei campi già presenti nel database.
-          </p>
         </section>
 
-        {/* Allergeni */}
+        {/* ALLERGENI */}
         <section className={`${card} space-y-3`}>
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-display text-base font-semibold text-white">
-              Allergeni &amp; Intolleranze
+              Allergeni
             </h2>
             <span className="text-[9px] font-semibold uppercase tracking-wider text-[#B5CBC9]">
               Reg. UE 1169/11
@@ -496,27 +553,28 @@ export function DishEditor({
           </div>
 
           <p className="text-xs leading-relaxed text-[#999999]">
-            Indica le sostanze effettivamente contenute o a rischio di contaminazione incrociata.
+            Indica le sostanze effettivamente contenute o a rischio di
+            contaminazione incrociata.
           </p>
 
           <div className="space-y-2">
-            {allergens
-              .filter((item) => tempAllergens.includes(item.id))
-              .map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-lg bg-[#152222] px-3 py-2.5"
-                >
-                  <span className="flex items-center gap-2.5 text-xs text-white">
-                    <span>{item.icon}</span>
-                    {item.name}
-                  </span>
-                  <span className="rounded-full bg-[#D8E9AC] px-2.5 py-1 text-[9px] font-bold text-[#0B1818]">
-                    PRESENTE
-                  </span>
-                </div>
-              ))}
-            {tempAllergens.length === 0 && (
+            {tempAllergens.length > 0 ? (
+              allergens
+                .filter((item) => tempAllergens.includes(item.id))
+                .map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-[#152222] px-3 py-2.5"
+                  >
+                    <span className="min-w-0 text-xs text-white">
+                      {item.name}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-[#D8E9AC] px-2.5 py-1 text-[9px] font-bold text-[#0B1818]">
+                      PRESENTE
+                    </span>
+                  </div>
+                ))
+            ) : (
               <p className="rounded-lg bg-[#152222] p-3 text-center text-xs text-[#999999]">
                 Nessun allergene selezionato.
               </p>
@@ -526,107 +584,164 @@ export function DishEditor({
           <button
             type="button"
             onClick={() => {
-              setTempAllergens([...(r.allergens as AllergenId[])]);
+              setTempAllergens([...(r.allergens ?? [])] as AllergenId[]);
               setAllergenModal(true);
             }}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#20302F] py-3 text-xs font-semibold text-[#D8E9AC]"
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#20302F] py-3 text-xs font-semibold text-[#D8E9AC]"
           >
             <SlidersHorizontal size={16} />
             Modifica Allergeni
           </button>
         </section>
 
-        {/* Abbinamento enologico */}
-        <section className={`${card} space-y-3`}>
+        {/* PAIRING ENOLOGICO */}
+        <section className={`${card} space-y-4`}>
           <h2 className="font-display text-base font-semibold text-white">
             Pairing Enologico Consigliato
           </h2>
 
-          {pairedFields("Vino consigliato", "sommelier_wine_it", "sommelier_wine_en")}
-          {pairedFields("Nota sull'abbinamento", "sommelier_note_it", "sommelier_note_en", true)}
+          <div className="rounded-lg bg-[#152222] p-3">
+            {pairedFields(
+              "Vino consigliato",
+              "sommelier_wine_it",
+              "sommelier_wine_en",
+            )}
+          </div>
+
+          <div className="rounded-lg bg-[#152222] p-3">
+            {pairedFields(
+              "Nota sull'abbinamento",
+              "sommelier_note_it",
+              "sommelier_note_en",
+              true,
+            )}
+          </div>
         </section>
 
-        {/* Badge e visibilità */}
+        {/* BADGE E VISIBILITÀ */}
         <section className={`${card} space-y-4`}>
           <h2 className="font-display text-base font-semibold text-white">
             Badge &amp; Visibilità
           </h2>
 
-          <div className="flex flex-wrap gap-2">
-            {r.tag_it && (
-              <span className="rounded-full bg-[#D8E9AC] px-3 py-1.5 text-[10px] font-semibold text-[#0B1818]">
-                ◈ {r.tag_it}
-              </span>
-            )}
-            <span className="rounded-full bg-[#20302F] px-3 py-1.5 text-[10px] text-[#B5CBC9]">
-              {r.tag_en || "Nessuna etichetta EN"}
-            </span>
-          </div>
+          <div>
+            <span className={label}>Badge del Piatto</span>
+            <div className="flex flex-wrap gap-2">
+              {r.tag_it ? (
+                <span className="rounded-full bg-[#D8E9AC] px-3 py-2 text-[10px] font-semibold text-[#0B1818]">
+                  ◈ {r.tag_it}
+                </span>
+              ) : (
+                <span className="rounded-full bg-[#20302F] px-3 py-2 text-[10px] text-[#B5CBC9]">
+                  Nessun badge selezionato
+                </span>
+              )}
 
-          <div className="flex items-center justify-between gap-3 rounded-lg bg-[#152222] p-3">
-            <div>
-              <p className="text-xs font-semibold text-white">Piatto Attivo nel Menu</p>
-              <p className="mt-1 text-[10px] text-[#999999]">
-                Visibile ai clienti nel menu digitale
-              </p>
+              {r.tag_en && (
+                <span className="rounded-full bg-[#20302F] px-3 py-2 text-[10px] text-[#B5CBC9]">
+                  {r.tag_en}
+                </span>
+              )}
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={r.visible}
-              onClick={() => set("visible", !r.visible)}
-              className={`flex h-6 w-12 items-center rounded-full p-0.5 transition ${r.visible ? "justify-end bg-[#D8E9AC]" : "justify-start bg-[#45483D]"}`}
-            >
-              <span className="h-5 w-5 rounded-full bg-[#0B1818] shadow" />
-            </button>
           </div>
 
-          <div className="rounded-lg bg-[#152222] p-3">
-            <p className="text-xs font-semibold text-white">Ordine da Smartphone / QR</p>
-            <p className="mt-1 text-[10px] leading-relaxed text-[#999999]">
-              Questa opzione è mostrata nel progetto grafico, ma non è ancora collegata a un campo del database.
-            </p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-[#152222] p-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white">
+                  Piatto Attivo nel Menu
+                </p>
+                <p className="mt-1 text-[10px] leading-relaxed text-[#999999]">
+                  Visibile ai clienti nel menu digitale
+                </p>
+              </div>
+              <Toggle
+                checked={Boolean(r.visible)}
+                onChange={() => set("visible", !r.visible)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-[#152222] p-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white">
+                  Abilita Ordine da Smartphone / QR
+                </p>
+                <p className="mt-1 text-[10px] leading-relaxed text-[#999999]">
+                  Consente l'ordine tramite QR Code
+                </p>
+              </div>
+              <Toggle checked={qrEnabled} onChange={toggleQr} />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-[#152222] p-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white">
+                  Piatto in Esaurimento / Stock Limitato
+                </p>
+                <p className="mt-1 text-[10px] leading-relaxed text-[#999999]">
+                  Segnala ai clienti la disponibilità limitata
+                </p>
+              </div>
+              <Toggle checked={stockEnabled} onChange={toggleStock} />
+            </div>
           </div>
 
-          <div className="rounded-lg bg-[#152222] p-3">
-            <p className="text-xs font-semibold text-white">Piatto in Esaurimento / Stock Limitato</p>
-            <p className="mt-1 text-[10px] leading-relaxed text-[#999999]">
-              La gestione delle porzioni residue richiederà campi dedicati nel database.
-            </p>
-          </div>
+          <p className="text-[10px] leading-relaxed text-[#89918E]">
+            Gli interruttori QR e disponibilità sono temporanei: non vengono
+            ancora salvati nel database. La visibilità del piatto, invece,
+            viene salvata regolarmente.
+          </p>
         </section>
 
-        {/* Zona rischio */}
+        {/* ZONA RISCHIO */}
         {!isNew && (
           <section className={`${card} space-y-3`}>
             <div className="flex items-center gap-2 text-[#FFB4AB]">
               <AlertTriangle size={17} />
-              <h2 className="font-display text-sm font-semibold">Zona Rischio</h2>
+              <h2 className="font-display text-sm font-semibold">
+                Zona Rischio
+              </h2>
             </div>
+
             <p className="text-xs leading-relaxed text-[#999999]">
-              L'eliminazione rimuoverà definitivamente il piatto dal menu.
+              Questa azione è irreversibile. Il piatto verrà eliminato
+              definitivamente dal menu.
             </p>
+
             <button
               type="button"
               onClick={() => {
-                if (window.confirm(`Eliminare definitivamente "${r.name_it}"?`)) {
+                if (
+                  window.confirm(
+                    `Eliminare definitivamente "${r.name_it}"?`,
+                  )
+                ) {
                   onDelete?.();
                 }
               }}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#3A2022] py-3 text-xs font-bold uppercase tracking-wider text-[#FFB4AB] transition hover:bg-[#51282A]"
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#3A2022] py-3 text-xs font-bold uppercase tracking-wider text-[#FFB4AB] transition hover:bg-[#51282A]"
             >
               <Trash2 size={16} />
-              Elimina Piatto dal Percorso
+              Elimina Piatto
             </button>
           </section>
         )}
 
-        {/* Pulsanti finali */}
-        <div className="grid grid-cols-2 gap-3">
-          <button type="button" onClick={onDone} className={buttonSecondary}>
+        {/* PULSANTI FINALI */}
+        <div className="grid grid-cols-2 gap-3 pt-1">
+          <button
+            type="button"
+            onClick={onDone}
+            className={buttonSecondary}
+          >
             Annulla
           </button>
-          <button type="submit" disabled={busy || uploading} className={buttonPrimary}>
+
+          <button
+            type="submit"
+            disabled={busy || uploading}
+            className={buttonPrimary}
+          >
             <Check size={16} />
             {busy ? "Salvataggio…" : "Salva Piatto"}
           </button>
@@ -637,16 +752,18 @@ export function DishEditor({
       {ingredientModal && (
         <div className="fixed inset-0 z-[80] flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#081616]">
           <header className="z-10 shrink-0 border-b border-white/10 bg-[#111E1E] pt-[env(safe-area-inset-top)]">
-            <div className="mx-auto flex min-h-16 max-w-lg items-center justify-between gap-3 px-5 py-3">
-              <div className="flex items-center gap-3">
+            <div className="mx-auto flex min-h-16 w-full max-w-lg items-center justify-between gap-3 px-4 py-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setIngredientModal(false)}
-                  className="text-white"
+                  className="shrink-0 text-white"
+                  aria-label="Indietro"
                 >
                   <ArrowLeft size={21} />
                 </button>
-                <div>
+
+                <div className="min-w-0">
                   <h2 className="font-display text-base font-semibold text-white">
                     Aggiungi Ingrediente
                   </h2>
@@ -655,33 +772,47 @@ export function DishEditor({
                   </p>
                 </div>
               </div>
-              <button type="button" onClick={() => setIngredientModal(false)}>
+
+              <button
+                type="button"
+                onClick={() => setIngredientModal(false)}
+                className="shrink-0 p-1 text-white"
+                aria-label="Chiudi"
+              >
                 <X size={20} />
               </button>
             </div>
           </header>
 
-          <div className="mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-5 sm:py-6">
-            <div className="space-y-6 pb-6">
-              <label className="block">
-                <span className={label}>Cerca o Inserisci Materia Prima</span>
+          <div className="mx-auto min-h-0 w-full max-w-lg flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-5 sm:px-5 sm:py-6">
+            <div className="space-y-5 pb-6">
+              <label className="block min-w-0">
+                <span className={label}>
+                  Cerca o Inserisci Materia Prima
+                </span>
                 <input
-                  className={`${input} min-h-12 text-base`}
+                  className={`${input} min-h-12`}
                   value={ingredientName}
-                  onChange={(event) => setIngredientName(event.target.value)}
+                  onChange={(event) =>
+                    setIngredientName(event.target.value)
+                  }
                   placeholder="es. Pistacchio Verde di Bronte DOP"
                 />
               </label>
 
-              <label className="block">
+              <label className="block min-w-0">
                 <span className={label}>Categoria Distinta Base</span>
                 <select
-                  className={`${input} min-h-12 text-base`}
+                  className={`${input} min-h-12`}
                   value={ingredientCategory}
-                  onChange={(event) => setIngredientCategory(event.target.value)}
+                  onChange={(event) =>
+                    setIngredientCategory(event.target.value)
+                  }
                 >
                   {ingredientCategories.map((category) => (
-                    <option key={category}>{category}</option>
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -690,43 +821,53 @@ export function DishEditor({
                 <label className="block min-w-0">
                   <span className={label}>Dosaggio / Grammi</span>
                   <input
-                    className={`${input} min-h-12 text-base`}
+                    className={`${input} min-h-12`}
                     value={ingredientDosage}
-                    onChange={(event) => setIngredientDosage(event.target.value)}
+                    onChange={(event) =>
+                      setIngredientDosage(event.target.value)
+                    }
                     placeholder="es. 50 g"
                   />
                 </label>
+
                 <label className="block min-w-0">
                   <span className={label}>Provenienza / Territorio</span>
                   <input
-                    className={`${input} min-h-12 text-base`}
+                    className={`${input} min-h-12`}
                     value={ingredientOrigin}
-                    onChange={(event) => setIngredientOrigin(event.target.value)}
+                    onChange={(event) =>
+                      setIngredientOrigin(event.target.value)
+                    }
                     placeholder="es. Sicilia / Etna"
                   />
                 </label>
               </div>
 
-              <label className="block">
+              <label className="block min-w-0">
                 <span className={label}>Presidio / Certificazione</span>
                 <select
-                  className={`${input} min-h-12 text-base`}
+                  className={`${input} min-h-12`}
                   value={ingredientCertification}
-                  onChange={(event) => setIngredientCertification(event.target.value)}
+                  onChange={(event) =>
+                    setIngredientCertification(event.target.value)
+                  }
                 >
                   {certifications.map((certification) => (
-                    <option key={certification}>{certification}</option>
+                    <option key={certification} value={certification}>
+                      {certification}
+                    </option>
                   ))}
                 </select>
               </label>
 
               <div>
                 <span className={label}>Allergeni Noti Associati</span>
+
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {allergens.map((item) => (
                     <label
                       key={item.id}
-                      className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-white/[0.07] bg-[#152222] px-3 py-3 text-xs text-white"
+                      className="flex min-h-12 min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-white/[0.07] bg-[#152222] px-3 py-3 text-xs text-white"
                     >
                       <input
                         type="checkbox"
@@ -738,22 +879,28 @@ export function DishEditor({
                               : [...current, item.id],
                           )
                         }
-                        className="h-4 w-4 shrink-0 accent-[#D8E9AC]"
+                        className="h-5 w-5 shrink-0 accent-[#D8E9AC]"
                       />
-                      <span className="min-w-0 leading-snug">{item.name}</span>
+                      <span className="min-w-0 leading-snug">
+                        {item.name}
+                      </span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              <p className="rounded-lg border border-[#D8E9AC]/15 bg-[#152222] p-4 text-[11px] leading-relaxed text-[#999999]">
-                In questa versione vengono salvati il nome dell'ingrediente e gli allergeni associati. Categoria, dosaggio, provenienza e certificazione resteranno temporanei finché non saranno aggiunti i relativi campi al database.
+              <p className="rounded-lg border border-[#D8E9AC]/15 bg-[#152222] p-3 text-[11px] leading-relaxed text-[#999999]">
+                In questa versione vengono salvati il nome
+                dell'ingrediente e gli allergeni associati. Categoria,
+                dosaggio, provenienza e certificazione resteranno
+                temporanei finché non saranno aggiunti i relativi campi
+                al database.
               </p>
             </div>
           </div>
 
-          <footer className="z-10 shrink-0 border-t border-white/10 bg-[#111E1E] px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4">
-            <div className="mx-auto grid max-w-lg grid-cols-2 gap-3">
+          <footer className="z-10 shrink-0 border-t border-white/10 bg-[#111E1E] px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3">
+            <div className="mx-auto grid w-full max-w-lg grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setIngredientModal(false)}
@@ -761,6 +908,7 @@ export function DishEditor({
               >
                 Annulla
               </button>
+
               <button
                 type="button"
                 onClick={addIngredient}
@@ -776,13 +924,19 @@ export function DishEditor({
 
       {/* MODALE MODIFICA ALLERGENI */}
       {allergenModal && (
-        <div className="fixed inset-0 z-[90] flex flex-col bg-[#081616]">
-          <header className="border-b border-white/10 bg-[#111E1E] pt-[env(safe-area-inset-top)]">
-            <div className="mx-auto flex h-16 max-w-lg items-center justify-between px-4">
+        <div className="fixed inset-0 z-[90] flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#081616]">
+          <header className="shrink-0 border-b border-white/10 bg-[#111E1E] pt-[env(safe-area-inset-top)]">
+            <div className="mx-auto flex min-h-16 max-w-lg items-center justify-between gap-3 px-4">
               <div className="flex min-w-0 items-center gap-3">
-                <button type="button" onClick={() => setAllergenModal(false)}>
+                <button
+                  type="button"
+                  onClick={() => setAllergenModal(false)}
+                  className="shrink-0"
+                  aria-label="Indietro"
+                >
                   <ArrowLeft size={21} />
                 </button>
+
                 <div className="min-w-0">
                   <h2 className="truncate font-display text-base font-semibold text-white">
                     Modifica Allergeni
@@ -792,47 +946,51 @@ export function DishEditor({
                   </p>
                 </div>
               </div>
-              <button type="button" onClick={() => setAllergenModal(false)}>
+
+              <button
+                type="button"
+                onClick={() => setAllergenModal(false)}
+                className="shrink-0"
+                aria-label="Chiudi"
+              >
                 <X size={20} />
               </button>
             </div>
           </header>
 
-          <div className="mx-auto w-full max-w-lg flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          <div className="mx-auto min-h-0 w-full max-w-lg flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
             <div className="rounded-xl border border-white/10 bg-[#111E1E] p-3">
               <p className="text-xs leading-relaxed text-[#999999]">
-                Seleziona gli allergeni effettivamente contenuti o a rischio contaminazione incrociata per il piatto.
+                Seleziona gli allergeni effettivamente contenuti o a
+                rischio contaminazione incrociata per il piatto.
               </p>
             </div>
 
             {allergens.map((item) => {
               const active = tempAllergens.includes(item.id);
+
               return (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between rounded-xl bg-[#152222] px-3.5 py-3"
+                  className="flex min-h-12 items-center justify-between gap-3 rounded-xl bg-[#152222] px-3.5 py-3"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-lg">{item.icon}</span>
-                    <span className="text-xs font-medium text-white">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="shrink-0 text-lg">{item.icon}</span>
+                    <span className="min-w-0 text-xs font-medium text-white">
                       {item.name}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={active}
-                    onClick={() => toggleAllergen(item.id)}
-                    className={`flex h-6 w-11 items-center rounded-full p-0.5 transition ${active ? "justify-end bg-[#D8E9AC]" : "justify-start bg-[#2A3737]"}`}
-                  >
-                    <span className={`h-5 w-5 rounded-full shadow ${active ? "bg-[#0B1818]" : "bg-[#89918E]"}`} />
-                  </button>
+
+                  <Toggle
+                    checked={active}
+                    onChange={() => toggleAllergen(item.id)}
+                  />
                 </div>
               );
             })}
           </div>
 
-          <footer className="border-t border-white/10 bg-[#111E1E]/95 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] backdrop-blur-xl">
+          <footer className="shrink-0 border-t border-white/10 bg-[#111E1E]/95 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] backdrop-blur-xl">
             <div className="mx-auto flex max-w-lg gap-3">
               <button
                 type="button"
@@ -841,12 +999,15 @@ export function DishEditor({
               >
                 Annulla
               </button>
+
               <button
                 type="button"
                 onClick={() => {
                   set("allergens", tempAllergens);
                   setAllergenModal(false);
-                  toast.success("Allergeni aggiornati. Ricordati di salvare il piatto.");
+                  toast.success(
+                    "Allergeni aggiornati. Ricordati di salvare il piatto.",
+                  );
                 }}
                 className={`${buttonPrimary} flex-[1.4]`}
               >
@@ -863,11 +1024,13 @@ export function DishEditor({
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
           onClick={(event) => {
-            if (event.target === event.currentTarget) setPreviewModal(false);
+            if (event.target === event.currentTarget) {
+              setPreviewModal(false);
+            }
           }}
         >
-          <div className="flex max-h-[90vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#111E1E] shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 bg-[#152222] px-4 py-3">
+          <div className="flex max-h-[90dvh] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#111E1E] shadow-2xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-white/10 bg-[#152222] px-4 py-3">
               <div>
                 <h3 className="font-display text-sm font-semibold text-[#D8E9AC]">
                   Anteprima Vista Ospite
@@ -876,24 +1039,31 @@ export function DishEditor({
                   Menu digitale · Anteprima
                 </p>
               </div>
+
               <button
                 type="button"
                 onClick={() => setPreviewModal(false)}
                 className="rounded-lg bg-[#20302F] p-2"
+                aria-label="Chiudi anteprima"
               >
                 <X size={17} />
               </button>
             </div>
 
-            <div className="space-y-4 overflow-y-auto p-4">
+            <div className="min-h-0 space-y-4 overflow-y-auto p-4">
               <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-[#20302F]">
                 {photo ? (
-                  <img src={photo} alt={r.name_it} className="h-full w-full object-cover" />
+                  <img
+                    src={photo}
+                    alt={r.name_it}
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="flex h-full items-center justify-center text-xs text-[#999999]">
                     Nessuna fotografia
                   </div>
                 )}
+
                 {r.tag_it && (
                   <span className="absolute left-3 top-3 rounded-full bg-[#D8E9AC] px-2 py-1 text-[9px] font-bold uppercase text-[#0B1818]">
                     {r.tag_it}
@@ -906,6 +1076,7 @@ export function DishEditor({
                   <h4 className="font-display text-lg font-semibold text-white">
                     {r.name_it || "Nome del piatto"}
                   </h4>
+
                   <span className="shrink-0 font-display text-base font-bold text-[#D8E9AC]">
                     {new Intl.NumberFormat("it-IT", {
                       style: "currency",
@@ -913,11 +1084,13 @@ export function DishEditor({
                     }).format(Number(r.price) || 0)}
                   </span>
                 </div>
+
                 {r.tag_it && (
                   <p className="mt-1 font-display text-xs italic text-[#B5CBC9]">
                     {r.tag_it}
                   </p>
                 )}
+
                 <p className="mt-3 text-xs leading-relaxed text-[#B5CBC9]">
                   {r.description_it}
                 </p>
@@ -948,20 +1121,23 @@ export function DishEditor({
               )}
 
               {r.sommelier_wine_it && (
-                <div className="flex items-center justify-between gap-3 rounded-lg bg-[#152222] p-3">
-                  <div>
-                    <p className="text-[10px] text-[#999999]">
-                      Abbinamento consigliato
+                <div className="rounded-lg bg-[#152222] p-3">
+                  <p className="text-[10px] text-[#999999]">
+                    Abbinamento consigliato
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-[#D8E9AC]">
+                    {r.sommelier_wine_it}
+                  </p>
+                  {r.sommelier_note_it && (
+                    <p className="mt-2 text-xs leading-relaxed text-[#B5CBC9]">
+                      {r.sommelier_note_it}
                     </p>
-                    <p className="mt-1 text-xs font-semibold text-[#D8E9AC]">
-                      {r.sommelier_wine_it}
-                    </p>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
 
-            <div className="border-t border-white/10 bg-[#111E1E] p-3">
+            <div className="shrink-0 border-t border-white/10 bg-[#111E1E] p-3">
               <button
                 type="button"
                 onClick={() => setPreviewModal(false)}
