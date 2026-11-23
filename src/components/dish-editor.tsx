@@ -1,4 +1,3 @@
-
 import { useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import {
@@ -53,14 +52,6 @@ const allergens: {
   { id: "molluschi", name: "Molluschi", icon: "🦪" },
 ];
 
-const ingredientCategories = [
-  "Salumi & Carni",
-  "Latticini & Formaggi",
-  "Conserve & Mieli",
-  "Spezie & Condimenti",
-  "Vegetali & Frutta",
-];
-
 const certifications = [
   "Nessuna",
   "Presidio Slow Food",
@@ -108,9 +99,6 @@ export function DishEditor({
   const [previewModal, setPreviewModal] = useState(false);
 
   const [ingredientName, setIngredientName] = useState("");
-  const [ingredientCategory, setIngredientCategory] = useState(
-    ingredientCategories[0],
-  );
   const [ingredientDosage, setIngredientDosage] = useState("");
   const [ingredientOrigin, setIngredientOrigin] = useState("");
   const [ingredientCertification, setIngredientCertification] =
@@ -270,40 +258,6 @@ export function DishEditor({
     onDone();
   };
 
-  const pairedFields = (
-    title: string,
-    italianKey: keyof DishRow,
-    englishKey: keyof DishRow,
-    multiline = false,
-  ) => (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {[
-        { language: "IT", key: italianKey },
-        { language: "EN", key: englishKey },
-      ].map(({ language, key }) => (
-        <label className="block min-w-0" key={language}>
-          <span className={label}>
-            {title} ({language})
-          </span>
-          {multiline ? (
-            <textarea
-              rows={3}
-              className={`${input} resize-y leading-relaxed`}
-              value={String(r[key] ?? "")}
-              onChange={(event) => set(key, event.target.value as never)}
-            />
-          ) : (
-            <input
-              className={input}
-              value={String(r[key] ?? "")}
-              onChange={(event) => set(key, event.target.value as never)}
-            />
-          )}
-        </label>
-      ))}
-    </div>
-  );
-
   const Toggle = ({
     checked,
     onChange,
@@ -448,8 +402,7 @@ export function DishEditor({
               />
             </div>
           </label>
-
-          <div className="rounded-lg bg-[#152222] p-3">
+                    <div className="rounded-lg bg-[#152222] p-3">
             <label className="block">
               <span className={label}>Prezzo Carta (€)</span>
               <input
@@ -601,20 +554,26 @@ export function DishEditor({
           </h2>
 
           <div className="rounded-lg bg-[#152222] p-3">
-            {pairedFields(
-              "Vino consigliato",
-              "sommelier_wine_it",
-              "sommelier_wine_en",
-            )}
+            <label className="block min-w-0">
+              <span className={label}>Vino consigliato (IT)</span>
+              <input
+                className={input}
+                value={r.sommelier_wine_it ?? ""}
+                onChange={(event) => set("sommelier_wine_it", event.target.value)}
+              />
+            </label>
           </div>
 
           <div className="rounded-lg bg-[#152222] p-3">
-            {pairedFields(
-              "Nota sull'abbinamento",
-              "sommelier_note_it",
-              "sommelier_note_en",
-              true,
-            )}
+            <label className="block min-w-0">
+              <span className={label}>Nota sull'abbinamento (IT)</span>
+              <textarea
+                rows={3}
+                className={`${input} resize-y leading-relaxed`}
+                value={r.sommelier_note_it ?? ""}
+                onChange={(event) => set("sommelier_note_it", event.target.value)}
+              />
+            </label>
           </div>
         </section>
 
@@ -800,23 +759,6 @@ export function DishEditor({
                 />
               </label>
 
-              <label className="block min-w-0">
-                <span className={label}>Categoria Distinta Base</span>
-                <select
-                  className={`${input} min-h-12`}
-                  value={ingredientCategory}
-                  onChange={(event) =>
-                    setIngredientCategory(event.target.value)
-                  }
-                >
-                  {ingredientCategories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block min-w-0">
                   <span className={label}>Dosaggio / Grammi</span>
@@ -891,8 +833,8 @@ export function DishEditor({
 
               <p className="rounded-lg border border-[#D8E9AC]/15 bg-[#152222] p-3 text-[11px] leading-relaxed text-[#999999]">
                 In questa versione vengono salvati il nome
-                dell'ingrediente e gli allergeni associati. Categoria,
-                dosaggio, provenienza e certificazione resteranno
+                dell'ingrediente e gli allergeni associati. Dosaggio,
+                provenienza e certificazione resteranno
                 temporanei finché non saranno aggiunti i relativi campi
                 al database.
               </p>
@@ -957,8 +899,7 @@ export function DishEditor({
               </button>
             </div>
           </header>
-
-          <div className="mx-auto min-h-0 w-full max-w-lg flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
+                    <div className="mx-auto min-h-0 w-full max-w-lg flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
             <div className="rounded-xl border border-white/10 bg-[#111E1E] p-3">
               <p className="text-xs leading-relaxed text-[#999999]">
                 Seleziona gli allergeni effettivamente contenuti o a
