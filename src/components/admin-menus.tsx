@@ -1,19 +1,7 @@
-
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  Check,
-  ChevronDown,
-  ChevronUp,
-  FileUp,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  UtensilsCrossed,
-  X,
-} from "lucide-react";
+import { Check, FileUp, Pencil, Plus, Trash2, UtensilsCrossed, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { allDishesQuery, type DishRow } from "@/lib/menu-api";
@@ -21,19 +9,34 @@ import type { Database } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 
 type MenuRow = Database["public"]["Tables"]["menus"]["Row"];
+type MenuInsert = Database["public"]["Tables"]["menus"]["Insert"];
 
 type AdminMenusProps = {
   onUploadPdf?: () => void;
 };
 
+const MENU_TYPES = [
+  "Degustazione",
+  "Alla Carta",
+  "Bistrot & Aperitivo",
+  "Special Event",
+] as const;
+
+const MENU_TIMES = [
+  "Tutte le fasce orarie (giorno + sera)",
+  "Giorno",
+  "Sera",
+  "Solo domenica a pranzo",
+] as const;
+
 const input =
-  "mt-1 w-full rounded-xl border border-white/10 bg-[#132726] px-3.5 py-3 text-sm text-[#EEEEEE] placeholder:text-[#999999] outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
+  "w-full min-h-[46px] rounded-xl border border-white/[0.07] bg-[#1F2C2C] px-3.5 text-sm font-medium text-[#D7E5E5] placeholder:text-[#B5CBC9]/60 outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
 
 const primaryButton =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#D8E9AC] px-5 text-xs font-bold uppercase tracking-wider text-[#0B1818] transition active:scale-[0.98] disabled:opacity-50";
+  "inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full bg-[#D8E9AC] px-5 text-xs font-bold tracking-wide text-[#151F00] shadow-[0_4px_20px_rgba(216,233,172,0.18)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
 
 const secondaryButton =
-  "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#152222] px-4 text-xs font-semibold text-[#D7E5E5] transition hover:border-[#D8E9AC]";
+  "inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-[#1F2C2C] px-5 text-xs font-semibold text-[#D7E5E5] transition hover:bg-[#2A3737] active:scale-95 disabled:opacity-50";
 
 const makeSlug = (value: string) =>
   value
@@ -43,27 +46,52 @@ const makeSlug = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
+const normalizeMenuTime = (value: string) => {
+  if (MENU_TIMES.includes(value as (typeof MENU_TIMES)[number])) return value;
+
+  const legacyValue = value.trim().toLocaleLowerCase("it-IT");
+  if (legacyValue === "pranzo") return "Giorno";
+  if (legacyValue === "cena") return "Sera";
+  return MENU_TIMES[0];
+};
+
+const formatPrice = (price: number) =>
+  new Intl.NumberFormat("it-IT", {
+    style: "currency",
+    currency: "EUR",
+  }).format(Number(price) || 0);
+
 function AdminMenus({ onUploadPdf }: AdminMenusProps) {
   const qc = useQueryClient();
 
-  const { data: menus = [], isLoading: menusLoading } = useQuery({
+  const {
+    data: menus = [],
+    isLoading: menusLoading,
+    isError: menusError,
+  } = useQuery({
     queryKey: ["menus", "admin"],
     queryFn: async (): Promise<MenuRow[]> => {
       const { data, error } = await supabase
         .from("menus")
         .select("*")
-        .order("sort_order")
-        .order("name_it");
+        .order("sort_order", { ascending: true })
+        .order("name_it", { ascending: true });
 
       if (error) throw error;
       return data ?? [];
     },
   });
 
-  const { data: dishes = [], isLoading: dishesLoading } =
-    useQuery(allDishesQuery);
+  const {
+    data: dishes = [],
+    isLoading: dishesLoading,
+    isError: dishesError,
+  } = useQuery(allDishesQuery);
 
-  const { data: menuDishRows = [] } = useQuery({
+  const {
+    data: menuDishRows = [],
+    isError: countsError,
+  } = useQuery({
     queryKey: ["menu-dish-counts"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -75,56 +103,29 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
     },
   });
 
-  const [selectedId, setSelectedId] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-
   const [nameIt, setNameIt] = useState("");
-  const [nameEn, setNameEn] = useState("");
+  const [menuType, setMenuType] = useState<string>("Alla Carta");
+  const [menuTime, setMenuTime] = useState<string>(MENU_TIMES[0]);
   const [descriptionIt, setDescriptionIt] = useState("");
-  const [descriptionEn, setDescriptionEn] = useState("");
-  const [slug, setSlug] = useState("");
-  const [sortOrder, setSortOrder] = useState(0);
   const [isActive, setIsActive] = useState(true);
-
-  const [busy, setBusy] = useState(false);
-  const [search, setSearch] = useState("");
+  const [selectedDishIds, setSelectedDishIds] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [showAssignments, setShowAssignments] = useState(true);
+  const [busy, setBusy] = useState(false);
 
-  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery({
-    queryKey: ["menu-assignments", selectedId],
-    enabled: Boolean(selectedId),
-    queryFn: async (): Promise<string[]> => {
-      const { data, error } = await supabase
-        .from("menu_dishes")
-        .select("dish_id")
-        .eq("menu_id", selectedId);
-
-      if (error) throw error;
-      return (data ?? []).map((row) => row.dish_id);
-    },
-  });
-
-  const assignedIds = new Set(assignments);
-
-  useEffect(() => {
-    if (selectedId && !menus.some((menu) => menu.id === selectedId)) {
-      setSelectedId("");
-    }
-  }, [menus, selectedId]);
-
-  const getDishCount = (menuId: string) =>
-    menuDishRows.filter((row) => row.menu_id === menuId).length;
+  const getDishCount = (menuId: string): number | null =>
+    countsError
+      ? null
+      : menuDishRows.filter((row) => row.menu_id === menuId).length;
 
   const resetForm = () => {
     setEditingId(null);
     setNameIt("");
-    setNameEn("");
+    setMenuType("Alla Carta");
+    setMenuTime(MENU_TIMES[0]);
     setDescriptionIt("");
-    setDescriptionEn("");
-    setSlug("");
-    setSortOrder(menus.length);
     setIsActive(true);
+    setSelectedDishIds([]);
     setShowForm(false);
   };
 
@@ -133,89 +134,217 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
     setShowForm(true);
   };
 
-  const startEdit = (menu: MenuRow) => {
-    setEditingId(menu.id);
-    setNameIt(menu.name_it);
-    setNameEn(menu.name_en);
-    setDescriptionIt(menu.description_it ?? "");
-    setDescriptionEn(menu.description_en ?? "");
-    setSlug(menu.slug);
-    setSortOrder(menu.sort_order);
-    setIsActive(menu.is_active);
-    setShowForm(true);
+  const startEdit = async (menu: MenuRow) => {
+    setBusy(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("menu_dishes")
+        .select("dish_id")
+        .eq("menu_id", menu.id);
+
+      if (error) throw error;
+
+      setEditingId(menu.id);
+      setNameIt(menu.name_it);
+      setMenuType(menu.type || "Alla Carta");
+      setMenuTime(normalizeMenuTime(menu.time || MENU_TIMES[0]));
+      setDescriptionIt(menu.description_it ?? "");
+      setIsActive(menu.is_active);
+      setSelectedDishIds((data ?? []).map((row) => row.dish_id));
+      setShowForm(true);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? `Impossibile caricare i piatti associati: ${error.message}`
+          : "Impossibile caricare i piatti associati al menù",
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   const refreshMenus = async () => {
-    await qc.invalidateQueries({ queryKey: ["menus"] });
-    await qc.invalidateQueries({ queryKey: ["menu-dish-counts"] });
-    await qc.invalidateQueries({ queryKey: ["menu-assignments"] });
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["menus"] }),
+      qc.invalidateQueries({ queryKey: ["menu-dish-counts"] }),
+      qc.invalidateQueries({ queryKey: ["menu-dishes"] }),
+    ]);
   };
 
-  const saveMenu = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const toggleDishSelection = (dishId: string) => {
+    setSelectedDishIds((current) =>
+      current.includes(dishId)
+        ? current.filter((id) => id !== dishId)
+        : [...current, dishId],
+    );
+  };
 
-    if (!nameIt.trim() || !nameEn.trim()) {
-      toast.error("Inserisci il nome del menù in entrambe le lingue");
+  const syncMenuDishes = async (
+    menuId: string,
+    desiredIds: string[],
+    availableDishes: DishRow[],
+  ) => {
+    const { data: currentRows, error: readError } = await supabase
+      .from("menu_dishes")
+      .select("dish_id")
+      .eq("menu_id", menuId);
+
+    if (readError) throw readError;
+
+    const currentIds = (currentRows ?? []).map((row) => row.dish_id);
+    const idsToRemove = currentIds.filter((id) => !desiredIds.includes(id));
+    const idsToAdd = desiredIds.filter((id) => !currentIds.includes(id));
+
+    if (idsToAdd.length > 0) {
+      const rows = idsToAdd.map((dishId) => ({
+        menu_id: menuId,
+        dish_id: dishId,
+        sort_order:
+          availableDishes.find((dish) => dish.id === dishId)?.sort_order ?? 0,
+      }));
+
+      const { error } = await supabase.from("menu_dishes").insert(rows);
+      if (error) throw error;
+    }
+
+    if (idsToRemove.length > 0) {
+      const { error } = await supabase
+        .from("menu_dishes")
+        .delete()
+        .eq("menu_id", menuId)
+        .in("dish_id", idsToRemove);
+
+      if (error) throw error;
+    }
+  };
+
+  const saveMenu = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedName = nameIt.trim();
+    if (!trimmedName) {
+      toast.error("Inserisci il nome del menù");
       return;
     }
 
-    const finalSlug = makeSlug(slug || nameIt);
-
-    if (!finalSlug) {
-      toast.error("Inserisci un nome valido per il menù");
+    if (!MENU_TYPES.includes(menuType as (typeof MENU_TYPES)[number])) {
+      toast.error("Seleziona una tipologia valida");
       return;
     }
 
-    setBusy(true);
+    if (!MENU_TIMES.includes(menuTime as (typeof MENU_TIMES)[number])) {
+      toast.error("Seleziona una fascia oraria valida");
+      return;
+    }
 
-    const payload = {
-      name_it: nameIt.trim(),
-      name_en: nameEn.trim(),
+    const existingMenu = editingId
+      ? menus.find((menu) => menu.id === editingId)
+      : undefined;
+
+    const payload: MenuInsert = {
+      name_it: trimmedName,
+      // Il layout approvato prevede un solo nome: in modifica preserviamo
+      // quello inglese già presente, mentre nei nuovi record usiamo il nome IT.
+      name_en: existingMenu?.name_en ?? trimmedName,
       description_it: descriptionIt.trim() || null,
-      description_en: descriptionEn.trim() || null,
-      slug: finalSlug,
-      sort_order: sortOrder,
+      description_en: existingMenu?.description_en ?? null,
+      slug: existingMenu?.slug || makeSlug(trimmedName),
+      type: menuType,
+      time: menuTime,
+      sort_order: existingMenu?.sort_order ?? menus.length,
       is_active: isActive,
       updated_at: new Date().toISOString(),
     };
 
-    const result = editingId
-      ? await supabase.from("menus").update(payload).eq("id", editingId)
-      : await supabase.from("menus").insert(payload);
-
-    setBusy(false);
-
-    if (result.error) {
-      toast.error(result.error.message);
+    if (!payload.slug) {
+      toast.error("Il nome del menù non genera un identificativo URL valido");
       return;
     }
 
-    toast.success(editingId ? "Menù aggiornato" : "Menù creato");
-    resetForm();
-    await refreshMenus();
+    setBusy(true);
+    let menuId = editingId;
+
+    try {
+      if (editingId) {
+        const { error } = await supabase
+          .from("menus")
+          .update(payload)
+          .eq("id", editingId);
+
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from("menus")
+          .insert(payload)
+          .select("id")
+          .single();
+
+        if (error) throw error;
+        menuId = data.id;
+      }
+
+      if (!menuId) throw new Error("ID del menù non disponibile dopo il salvataggio");
+
+      try {
+        await syncMenuDishes(menuId, selectedDishIds, dishes);
+      } catch (assignmentError) {
+        // Se un nuovo menù è già stato creato, lo convertiamo in modalità
+        // modifica così il successivo tentativo non crea un duplicato.
+        if (!editingId) setEditingId(menuId);
+        await refreshMenus();
+        throw new Error(
+          `Menù salvato, ma non è stato possibile aggiornare i piatti associati. ${
+            assignmentError instanceof Error
+              ? assignmentError.message
+              : "Riprova."
+          }`,
+        );
+      }
+
+      toast.success(editingId ? "Menù aggiornato" : "Menù creato");
+      resetForm();
+      await refreshMenus();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il salvataggio del menù",
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   const toggleActive = async (menu: MenuRow) => {
-    const { error } = await supabase
-      .from("menus")
-      .update({
-        is_active: !menu.is_active,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", menu.id);
+    setBusy(true);
 
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { error } = await supabase
+        .from("menus")
+        .update({
+          is_active: !menu.is_active,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", menu.id);
+
+      if (error) throw error;
+
+      toast.success(
+        menu.is_active
+          ? "Menù nascosto ai clienti"
+          : "Menù visibile ai clienti",
+      );
+      await refreshMenus();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Errore durante la modifica della visibilità",
+      );
+    } finally {
+      setBusy(false);
     }
-
-    toast.success(
-      menu.is_active
-        ? "Menù nascosto ai clienti"
-        : "Menù visibile ai clienti",
-    );
-
-    await refreshMenus();
   };
 
   const deleteMenu = async (menu: MenuRow) => {
@@ -229,102 +358,57 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
 
     setBusy(true);
 
-    const { error: assignmentError } = await supabase
-      .from("menu_dishes")
-      .delete()
-      .eq("menu_id", menu.id);
-
-    if (assignmentError) {
-      setBusy(false);
-      toast.error(assignmentError.message);
-      return;
-    }
-
-    const { error } = await supabase
-      .from("menus")
-      .delete()
-      .eq("id", menu.id);
-
-    setBusy(false);
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
-    if (selectedId === menu.id) setSelectedId("");
-    if (editingId === menu.id) resetForm();
-
-    toast.success("Menù eliminato");
-    await refreshMenus();
-  };
-
-  const toggleDish = async (dish: DishRow) => {
-    if (!selectedId) return;
-
-    const alreadyAssigned = assignedIds.has(dish.id);
-
-    if (alreadyAssigned) {
-      const { error } = await supabase
+    try {
+      const { error: assignmentsError } = await supabase
         .from("menu_dishes")
         .delete()
-        .eq("menu_id", selectedId)
-        .eq("dish_id", dish.id);
+        .eq("menu_id", menu.id);
 
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
-    } else {
-      const { error } = await supabase.from("menu_dishes").insert({
-        menu_id: selectedId,
-        dish_id: dish.id,
-        sort_order: dish.sort_order,
-      });
+      if (assignmentsError) throw assignmentsError;
 
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
+      const { error } = await supabase
+        .from("menus")
+        .delete()
+        .eq("id", menu.id);
+
+      if (error) throw error;
+
+      if (editingId === menu.id) resetForm();
+      toast.success("Menù eliminato");
+      await refreshMenus();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Errore durante l'eliminazione del menù",
+      );
+    } finally {
+      setBusy(false);
     }
-
-    await qc.invalidateQueries({
-      queryKey: ["menu-assignments", selectedId],
-    });
-    await qc.invalidateQueries({ queryKey: ["menu-dish-counts"] });
-    await qc.invalidateQueries({ queryKey: ["menu-dishes", selectedId] });
-
-    toast.success(
-      alreadyAssigned
-        ? "Piatto rimosso dal menù"
-        : "Piatto aggiunto al menù",
-    );
   };
-
-  const filteredDishes = dishes.filter((dish) => {
-    const term = search.trim().toLowerCase();
-
-    return (
-      !term ||
-      dish.name_it.toLowerCase().includes(term) ||
-      dish.name_en.toLowerCase().includes(term)
-    );
-  });
 
   if (menusLoading) {
     return (
-      <div className="rounded-2xl bg-[#111E1E] px-5 py-12 text-center text-sm text-[#999999]">
+      <div className="rounded-2xl border border-white/[0.06] bg-[#111E1E] px-5 py-12 text-center text-sm text-[#B5CBC9]">
         Caricamento menù…
       </div>
     );
   }
 
+  if (menusError) {
+    return (
+      <div className="rounded-2xl border border-[#FFB4AB]/20 bg-[#111E1E] p-4 text-sm text-[#FFB4AB]">
+        Non è stato possibile caricare i menù. Verifica la connessione e riprova.
+      </div>
+    );
+  }
+
   return (
-    <section className="space-y-4 text-[#D7E5E5]">
-      {/* Intestazione */}
+    <section className="flex flex-col gap-4 text-[#D7E5E5]">
+      {/* Intestazione della sezione, allineata al layout Horloge_design */}
       <div className="flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-[#111E1E] p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-display text-xl font-semibold text-white">
+          <h2 className="font-display text-lg font-medium text-white">
             Menù del Ristorante
           </h2>
           <p className="mt-1 text-xs text-[#B5CBC9]">
@@ -332,179 +416,44 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => {
-              if (onUploadPdf) {
-                onUploadPdf();
-              } else {
-                toast.error("Collegamento all'importazione PDF da completare");
-              }
-            }}
-            className={secondaryButton}
+            onClick={onUploadPdf}
+            disabled={busy}
+            className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.06] bg-[#1F2C2C] px-3.5 text-xs font-semibold text-[#D8E9AC] transition hover:bg-[#2A3737] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <FileUp className="h-4 w-4 text-[#D8E9AC]" />
+            <FileUp className="h-[17px] w-[17px]" />
             Carica Menù PDF
           </button>
 
           <button
             type="button"
             onClick={startNew}
-            aria-label="Crea nuovo menù"
-            title="Crea nuovo menù"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#D8E9AC] text-[#0B1818] transition hover:brightness-110"
+            aria-label="Nuovo Menù"
+            title="Nuovo Menù"
+            disabled={busy}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#D8E9AC] text-[#151F00] shadow-[0_4px_20px_rgba(216,233,172,0.22)] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="h-5 w-5" />
           </button>
         </div>
       </div>
 
-      {/* Modulo nuovo menù / modifica menù */}
-      {showForm && (
-        <form
-          onSubmit={saveMenu}
-          className="space-y-4 rounded-2xl border border-[#D8E9AC]/20 bg-[#111E1E] p-4 sm:p-5"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#D8E9AC]">
-                Configurazione
-              </p>
-              <h3 className="mt-1 font-display text-xl text-white">
-                {editingId ? "Modifica Menù" : "Nuovo Menù"}
-              </h3>
-            </div>
-
-            <button
-              type="button"
-              onClick={resetForm}
-              aria-label="Chiudi modulo"
-              className="grid h-9 w-9 place-items-center rounded-full bg-[#152222] text-[#B5CBC9]"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-[11px] text-[#B5CBC9]">
-              Nome italiano *
-              <input
-                className={input}
-                value={nameIt}
-                onChange={(e) => {
-                  setNameIt(e.target.value);
-                  if (!editingId) setSlug(makeSlug(e.target.value));
-                }}
-                placeholder="Menu principale"
-                required
-              />
-            </label>
-
-            <label className="block text-[11px] text-[#B5CBC9]">
-              Nome inglese *
-              <input
-                className={input}
-                value={nameEn}
-                onChange={(e) => setNameEn(e.target.value)}
-                placeholder="Main menu"
-                required
-              />
-            </label>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-[11px] text-[#B5CBC9]">
-              Descrizione italiana
-              <textarea
-                rows={3}
-                className={input}
-                value={descriptionIt}
-                onChange={(e) => setDescriptionIt(e.target.value)}
-              />
-            </label>
-
-            <label className="block text-[11px] text-[#B5CBC9]">
-              Descrizione inglese
-              <textarea
-                rows={3}
-                className={input}
-                value={descriptionEn}
-                onChange={(e) => setDescriptionEn(e.target.value)}
-              />
-            </label>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-[11px] text-[#B5CBC9]">
-              Identificativo URL
-              <input
-                className={input}
-                value={slug}
-                onChange={(e) => setSlug(makeSlug(e.target.value))}
-                placeholder="menu-principale"
-                required
-              />
-            </label>
-
-            <label className="block text-[11px] text-[#B5CBC9]">
-              Ordine di visualizzazione
-              <input
-                type="number"
-                className={input}
-                value={sortOrder}
-                onChange={(e) => setSortOrder(Number(e.target.value))}
-              />
-            </label>
-          </div>
-
-          <label className="flex items-center justify-between gap-3 rounded-xl bg-[#152222] p-3">
-            <span>
-              <span className="block text-xs font-semibold text-white">
-                Visibile ai clienti
-              </span>
-              <span className="mt-1 block text-[10px] text-[#999999]">
-                Attiva o nascondi questo menù nella pagina pubblica.
-              </span>
-            </span>
-
-            <input
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="h-5 w-5 accent-[#D8E9AC]"
-            />
-          </label>
-
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={resetForm}
-              className={secondaryButton}
-            >
-              Annulla
-            </button>
-
-            <button type="submit" disabled={busy} className={primaryButton}>
-              <Check className="h-4 w-4" />
-              {busy
-                ? "Salvataggio…"
-                : editingId
-                  ? "Salva modifiche"
-                  : "Crea menù"}
-            </button>
-          </div>
-        </form>
+      {/* Elenco delle carte */}
+      {countsError && (
+        <p className="rounded-xl border border-[#FFB4AB]/20 bg-[#111E1E] p-3 text-xs text-[#FFB4AB]">
+          Non è stato possibile aggiornare il conteggio dei piatti associati.
+        </p>
       )}
 
-      {/* Elenco menù */}
       {menus.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 bg-[#111E1E] px-5 py-12 text-center">
           <UtensilsCrossed className="mx-auto h-8 w-8 text-[#D8E9AC]" />
           <p className="mt-3 text-sm font-semibold text-white">
             Nessun menù configurato
           </p>
-          <p className="mt-1 text-xs text-[#999999]">
+          <p className="mt-1 text-xs text-[#B5CBC9]">
             Crea il primo menù del ristorante per iniziare.
           </p>
           <button
@@ -513,251 +462,361 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
             className={cn(primaryButton, "mt-5")}
           >
             <Plus className="h-4 w-4" />
-            Crea menù
+            Crea Menù
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3" id="restaurant-menus-list">
           {menus.map((menu) => {
-            const selected = selectedId === menu.id;
             const dishCount = getDishCount(menu.id);
 
             return (
               <article
                 key={menu.id}
                 className={cn(
-                  "flex flex-col gap-3 rounded-2xl border bg-[#111E1E] p-4 transition",
-                  selected
-                    ? "border-[#D8E9AC]/40"
-                    : "border-white/[0.06]",
+                  "flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-[#152222] p-4 transition-opacity",
+                  menu.is_active ? "opacity-100" : "opacity-70",
                 )}
               >
-                {/* Titolo e stato */}
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-display text-lg font-semibold text-white">
+                      <h3 className="truncate font-display text-base font-semibold text-white">
                         {menu.name_it}
                       </h3>
-
                       <span
                         className={cn(
-                          "rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider",
+                          "inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
                           menu.is_active
-                            ? "bg-[#D8E9AC]/15 text-[#D8E9AC]"
-                            : "bg-[#343B38] text-[#A5AAA5]",
+                            ? "bg-[#D8E9AC]/20 text-[#D8E9AC]"
+                            : "bg-[#1F2C2C] text-[#B5CBC9]",
                         )}
                       >
                         {menu.is_active ? "Visibile Ospiti" : "Nascosto Ospiti"}
                       </span>
                     </div>
-
-                    <p className="mt-1 text-xs leading-5 text-[#B5CBC9]">
-                      {menu.description_it || menu.name_en}
+                    <p className="mt-0.5 text-[11px] text-[#B5CBC9]">
+                      {normalizeMenuTime(menu.time)} • {menu.description_it || menu.type}
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedId(selected ? "" : menu.id);
-                      setShowAssignments(true);
-                    }}
-                    aria-label={
-                      selected ? "Chiudi associazione piatti" : "Gestisci piatti"
-                    }
-                    title="Gestisci piatti"
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#152222] text-[#D8E9AC]"
-                  >
-                    {selected ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void startEdit(menu)}
+                      disabled={busy}
+                      aria-label={`Modifica menù ${menu.name_it}`}
+                      title="Modifica Menù"
+                      className="grid h-8 w-8 place-items-center rounded-full border border-white/[0.06] bg-[#1F2C2C] text-[#D8E9AC] transition hover:bg-[#2A3737] disabled:opacity-40"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void deleteMenu(menu)}
+                      disabled={busy}
+                      aria-label={`Elimina menù ${menu.name_it}`}
+                      title="Elimina Menù"
+                      className="grid h-8 w-8 place-items-center rounded-full border border-white/[0.06] bg-[#1F2C2C] text-[#FFB4AB] transition hover:bg-[#3A2022] disabled:opacity-40"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Comandi */}
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => startEdit(menu)}
-                    className="grid h-8 w-8 place-items-center rounded-full bg-[#253333] text-[#D7E5E5] transition hover:bg-[#D8E9AC] hover:text-[#0B1818]"
-                    aria-label="Modifica menù"
-                    title="Modifica"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => deleteMenu(menu)}
-                    disabled={busy}
-                    className="grid h-8 w-8 place-items-center rounded-full bg-[#253333] text-[#D7E5E5] transition hover:bg-[#5A2929] hover:text-[#FFB4AB] disabled:opacity-50"
-                    aria-label="Elimina menù"
-                    title="Elimina"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-
-                {/* Informazioni e visibilità QR */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-3">
-                  <div className="flex items-center gap-2 text-[11px] text-[#B5CBC9]">
-                    <UtensilsCrossed className="h-3.5 w-3.5 text-[#D8E9AC]" />
-                    <span>
-                      {dishCount}{" "}
-                      {dishCount === 1 ? "piatto associato" : "piatti associati"}
+                <div className="flex items-center justify-between gap-3 border-t border-white/[0.07] pt-2 text-xs text-[#B5CBC9]">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="font-semibold text-white">
+                      {dishCount === null
+                        ? "Conteggio non disponibile"
+                        : `${dishCount} ${dishCount === 1 ? "piatto associato" : "piatti associati"}`}
+                    </span>
+                    <span aria-hidden="true">•</span>
+                    <span className="font-medium text-[#D8E9AC]">
+                      {menu.type}
                     </span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => toggleActive(menu)}
-                    className="flex items-center gap-2 text-[10px] font-semibold text-[#B5CBC9]"
-                    aria-label={
-                      menu.is_active
-                        ? "Nascondi menù ai clienti"
-                        : "Mostra menù ai clienti"
-                    }
-                  >
-                    <span
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-[11px] font-medium text-white">
+                      QR Ospiti
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={menu.is_active}
+                      aria-label={
+                        menu.is_active
+                          ? `Nascondi ${menu.name_it} dal QR`
+                          : `Mostra ${menu.name_it} nel QR`
+                      }
+                      disabled={busy}
+                      onClick={() => void toggleActive(menu)}
                       className={cn(
-                        "relative h-5 w-9 rounded-full transition",
+                        "relative h-5 w-9 rounded-full transition disabled:opacity-40",
                         menu.is_active ? "bg-[#D8E9AC]" : "bg-[#45483D]",
                       )}
                     >
                       <span
                         className={cn(
-                          "absolute top-0.5 h-4 w-4 rounded-full bg-[#0B1818] transition-all",
+                          "absolute top-0.5 h-4 w-4 rounded-full bg-[#081616] transition-all",
                           menu.is_active ? "left-[18px]" : "left-0.5",
                         )}
                       />
-                    </span>
-                    QR Ospiti
-                  </button>
-                </div>
-
-                {/* Associazione piatti */}
-                {selected && (
-                  <div className="border-t border-white/[0.07] pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowAssignments((value) => !value)}
-                      className="flex w-full items-center justify-between gap-3 text-left"
-                    >
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#D8E9AC]">
-                          Composizione
-                        </p>
-                        <h4 className="mt-1 font-display text-base text-white">
-                          Associazione piatti
-                        </h4>
-                      </div>
-
-                      {showAssignments ? (
-                        <ChevronUp className="h-4 w-4 text-[#D8E9AC]" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-[#D8E9AC]" />
-                      )}
                     </button>
-
-                    {showAssignments && (
-                      <div className="mt-4">
-                        <p className="mb-3 text-xs leading-5 text-[#999999]">
-                          Seleziona i piatti da includere in questo menù.
-                          Uno stesso piatto può appartenere a più menù.
-                        </p>
-
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#999999]" />
-                          <input
-                            className={cn(input, "pl-10")}
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Cerca un piatto…"
-                          />
-                        </div>
-
-                        {dishesLoading || assignmentsLoading ? (
-                          <p className="py-6 text-center text-xs text-[#999999]">
-                            Caricamento piatti…
-                          </p>
-                        ) : (
-                          <>
-                            <div className="my-3 flex items-center justify-between">
-                              <span className="text-[10px] text-[#999999]">
-                                Piatti selezionati
-                              </span>
-                              <span className="rounded-full bg-[#D8E9AC]/10 px-3 py-1 text-[10px] font-bold text-[#D8E9AC]">
-                                {assignments.length}
-                              </span>
-                            </div>
-
-                            <div className="max-h-[460px] space-y-2 overflow-y-auto pr-1">
-                              {filteredDishes.map((dish) => {
-                                const checked = assignedIds.has(dish.id);
-
-                                return (
-                                  <label
-                                    key={dish.id}
-                                    className={cn(
-                                      "flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition",
-                                      checked
-                                        ? "border-[#D8E9AC]/40 bg-[#D8E9AC]/[0.06]"
-                                        : "border-white/[0.06] bg-[#152222] hover:border-white/20",
-                                    )}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={checked}
-                                      onChange={() => toggleDish(dish)}
-                                      className="h-4 w-4 shrink-0 accent-[#D8E9AC]"
-                                    />
-
-                                    {dish.image ? (
-                                      <img
-                                        src={dish.image}
-                                        alt=""
-                                        className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                                      />
-                                    ) : (
-                                      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[#253333] text-[#D8E9AC]">
-                                        <UtensilsCrossed className="h-4 w-4" />
-                                      </div>
-                                    )}
-
-                                    <span className="min-w-0 flex-1">
-                                      <span className="block truncate text-xs font-semibold text-white">
-                                        {dish.name_it}
-                                      </span>
-                                      <span className="mt-1 block truncate text-[10px] text-[#999999]">
-                                        {dish.name_en}
-                                      </span>
-                                    </span>
-
-                                    {checked && (
-                                      <Check className="h-4 w-4 shrink-0 text-[#D8E9AC]" />
-                                    )}
-                                  </label>
-                                );
-                              })}
-
-                              {filteredDishes.length === 0 && (
-                                <p className="py-6 text-center text-xs text-[#999999]">
-                                  Nessun piatto trovato.
-                                </p>
-                              )}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
                   </div>
-                )}
+                </div>
               </article>
             );
           })}
+        </div>
+      )}
+
+      {/* Modale a schermo intero: struttura mobile del design originale */}
+      {showForm && (
+        <div
+          className="fixed inset-0 z-[75] flex h-[100dvh] w-full flex-col overflow-hidden bg-[#081616]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="admin-menu-modal-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !busy) resetForm();
+          }}
+        >
+          <form
+            onSubmit={saveMenu}
+            className="mx-auto flex h-full w-full max-w-lg flex-col overflow-hidden bg-[#081616]"
+            aria-label={editingId ? "Modifica menù" : "Nuovo menù"}
+          >
+            <header className="sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#111E1E] px-4 py-4">
+              <button
+                type="button"
+                onClick={resetForm}
+                disabled={busy}
+                aria-label="Chiudi"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#1F2C2C] text-[#D7E5E5] transition hover:bg-[#2A3737] disabled:opacity-40"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div className="flex min-w-0 flex-1 flex-col pr-10 text-center">
+                <h2
+                  id="admin-menu-modal-title"
+                  className="font-display text-lg font-semibold leading-tight text-white"
+                >
+                  {editingId ? "Modifica Menù" : "Nuovo Menù"}
+                </h2>
+                <p className="text-[11px] text-[#B5CBC9]">
+                  {editingId
+                    ? "Aggiorna impostazioni e piatti"
+                    : "Componi la carta o percorso gastronomico"}
+                </p>
+              </div>
+            </header>
+
+            <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 pb-6 sm:p-6">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="admin-menu-name"
+                  className="text-[11px] font-semibold uppercase tracking-wider text-[#D7E5E5]"
+                >
+                  Nome del Menù *
+                </label>
+                <input
+                  id="admin-menu-name"
+                  autoFocus
+                  required
+                  maxLength={120}
+                  className={cn(input, "text-base")}
+                  value={nameIt}
+                  onChange={(event) => setNameIt(event.target.value)}
+                  disabled={busy}
+                  placeholder="Es. Menu principale, Menu estivo..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <label
+                    htmlFor="admin-menu-type"
+                    className="text-[11px] font-semibold uppercase tracking-wider text-[#D7E5E5]"
+                  >
+                    Tipologia *
+                  </label>
+                  <select
+                    id="admin-menu-type"
+                    required
+                    className={cn(input, "min-w-0 px-3 text-sm")}
+                    value={menuType}
+                    onChange={(event) => setMenuType(event.target.value)}
+                    disabled={busy}
+                  >
+                    {MENU_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <label
+                    htmlFor="admin-menu-time"
+                    className="text-[11px] font-semibold uppercase tracking-wider text-[#D7E5E5]"
+                  >
+                    Fascia Oraria *
+                  </label>
+                  <select
+                    id="admin-menu-time"
+                    required
+                    className={cn(input, "min-w-0 px-3 text-xs")}
+                    value={menuTime}
+                    onChange={(event) => setMenuTime(event.target.value)}
+                    disabled={busy}
+                  >
+                    {MENU_TIMES.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="admin-menu-description"
+                  className="text-[11px] font-semibold uppercase tracking-wider text-[#D7E5E5]"
+                >
+                  Descrizione o Nota Prezzo
+                </label>
+                <input
+                  id="admin-menu-description"
+                  maxLength={300}
+                  className={cn(input, "text-sm")}
+                  value={descriptionIt}
+                  onChange={(event) => setDescriptionIt(event.target.value)}
+                  disabled={busy}
+                  placeholder="Es. Percorso a 5 portate con pairing d'autore"
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.06] bg-[#1F2C2C] p-3.5">
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-xs font-semibold text-white">
+                    Visibile nel Menù Ospiti (QR)
+                  </span>
+                  <span className="mt-1 text-[11px] text-[#B5CBC9]">
+                    I clienti possono consultarlo con il QR
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isActive}
+                  aria-label="Visibilità del menù nel QR"
+                  onClick={() => setIsActive((current) => !current)}
+                  disabled={busy}
+                  className={cn(
+                    "relative h-5 w-9 shrink-0 rounded-full transition",
+                    isActive ? "bg-[#D8E9AC]" : "bg-[#45483D]",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-0.5 h-4 w-4 rounded-full bg-[#081616] transition-all",
+                      isActive ? "left-[18px]" : "left-0.5",
+                    )}
+                  />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-2.5 pt-1">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#D7E5E5]">
+                    <Check className="h-4 w-4 text-[#D8E9AC]" />
+                    {editingId
+                      ? "Piatti Associati al Menù"
+                      : "Associa Piatti Disponibili"}
+                  </label>
+                  <span className="shrink-0 rounded-full bg-[#D8E9AC] px-2.5 py-1 text-[11px] font-semibold text-[#151F00]">
+                    {selectedDishIds.length} {selectedDishIds.length === 1 ? "piatto selezionato" : "piatti selezionati"}
+                  </span>
+                </div>
+
+                <div className="flex max-h-56 flex-col gap-2 overflow-y-auto rounded-2xl border border-white/[0.06] bg-[#111E1E] p-3">
+                  {dishesLoading ? (
+                    <p className="py-5 text-center text-xs text-[#B5CBC9]">
+                      Caricamento piatti…
+                    </p>
+                  ) : dishesError ? (
+                    <p className="py-5 text-center text-xs text-[#FFB4AB]">
+                      Non è stato possibile caricare i piatti. Chiudi e riprova.
+                    </p>
+                  ) : dishes.length === 0 ? (
+                    <p className="py-5 text-center text-xs text-[#B5CBC9]">
+                      Non ci sono piatti da associare.
+                    </p>
+                  ) : (
+                    dishes.map((dish) => {
+                      const checked = selectedDishIds.includes(dish.id);
+
+                      return (
+                        <label
+                          key={dish.id}
+                          className={cn(
+                            "flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition-colors",
+                            checked
+                              ? "border-[#D8E9AC]/30 bg-[#D8E9AC]/[0.06]"
+                              : "border-transparent bg-[#152222] hover:bg-[#1F2C2C]",
+                          )}
+                        >
+                          <span className="flex min-w-0 items-center gap-2.5">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleDishSelection(dish.id)}
+                              disabled={busy}
+                              className="h-4 w-4 shrink-0 cursor-pointer rounded accent-[#D8E9AC]"
+                            />
+                            <span className="truncate text-xs font-medium text-[#D7E5E5]">
+                              {dish.name_it}
+                            </span>
+                          </span>
+                          <span className="shrink-0 pl-2 text-xs font-semibold text-[#D8E9AC]">
+                            {formatPrice(dish.price)}
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <footer className="sticky bottom-0 z-20 grid shrink-0 grid-cols-2 gap-3 border-t border-white/[0.07] bg-[#081616]/95 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] backdrop-blur-xl">
+              <button
+                type="button"
+                onClick={resetForm}
+                disabled={busy}
+                className={secondaryButton}
+              >
+                Annulla
+              </button>
+              <button
+                type="submit"
+                disabled={busy || dishesLoading || dishesError}
+                className={primaryButton}
+              >
+                {busy ? (
+                  "Salvataggio…"
+                ) : editingId ? (
+                  "Salva Modifiche"
+                ) : (
+                  "Crea Menù"
+                )}
+              </button>
+            </footer>
+          </form>
         </div>
       )}
     </section>
