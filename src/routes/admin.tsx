@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  ArrowUpRight,
+  ArrowDown,
+  ArrowUp,
   Check,
   ChevronRight,
   Eye,
@@ -16,14 +17,13 @@ import {
   Search,
   Trash2,
   UtensilsCrossed,
-  UserRound,
   X,
 } from "lucide-react";
 
 import { MenuImporter } from "../lib/menu-importer";
 import { supabase } from "@/integrations/supabase/client";
 import { allDishesQuery, type DishRow } from "@/lib/menu-api";
-import { categories, formatPrice } from "@/lib/menu-data";
+import { formatPrice } from "@/lib/menu-data";
 import { AdminMenus } from "@/components/admin-menus";
 import { DishEditor } from "@/components/dish-editor";
 import { cn } from "@/lib/utils";
@@ -84,6 +84,15 @@ const empty: DishRow = {
 };
 
 type AdminTab = "dishes" | "categories" | "menus";
+
+type CategoryDraft = {
+  id: string;
+  name_it: string;
+  name_en: string;
+  description_it: string;
+  description_en: string;
+  sort_order: number;
+};
 
 function AdminPage() {
   const [state, setState] = useState<"loading" | "out" | "in">("loading");
@@ -216,7 +225,25 @@ function Login() {
 
 function Editor() {
   const qc = useQueryClient();
+
   const { data = [], isLoading } = useQuery(allDishesQuery);
+
+  const {
+    data: categoryRows = [],
+    isLoading: categoriesLoading,
+    isError: categoriesError,
+  } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("sort_order", { ascending: true });
+
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const [edit, setEdit] = useState<{
     row: DishRow;
@@ -227,6 +254,10 @@ function Editor() {
   const [tab, setTab] = useState<AdminTab>("dishes");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+
+  const [categoryDraft, setCategoryDraft] =
+    useState<CategoryDraft | null>(null);
+  const [categoryBusy, setCategoryBusy] = useState(false);
 
   const remove = async (r: DishRow): Promise<boolean> => {
     if (!confirm(`Eliminare definitivamente "${r.name_it}"?`)) {
@@ -304,7 +335,7 @@ function Editor() {
     setEdit({
       row: {
         ...empty,
-        category: (categoryId || "antipasti") as DishRow["category"],
+        category: (categoryId || categoryRows[0]?.id || "antipasti") as DishRow["category"],
         sort_order: nextOrder,
       },
       isNew: true,
@@ -313,6 +344,141 @@ function Editor() {
 
   const openEditDish = (dish: DishRow) => {
     setEdit({ row: dish, isNew: false });
+  };
+
+  const openNewCategory = () => {
+    setCategoryDraft({
+      id: "",
+      name_it: "",
+      name_en: "",
+      description_it: "",
+      description_en: "",
+      sort_order: categoryRows.length,
+    });
+  };
+
+  const openEditCategory = (category: CategoryDraft) => {
+    setCategoryDraft({ ...category });
+  };
+
+  const saveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!categoryDraft) return;
+
+    const nameIt = categoryDraft.name_it.trim();
+    const nameEn = categoryDraft.name_en.trim();
+
+    if (!nameIt || !nameEn) {
+      toast.error("Inserisci il nome della categoria in entrambe le lingue.");
+      return;
+    }
+
+    setCategoryBusy(true);
+
+    const payload = {
+      name_it: nameIt,
+      name_en: nameEn,
+      description_it: categoryDraft.description_it.trim(),
+      description_en: categoryDraft.description_en.trim(),
+      sort_order: categoryDraft.sort_order,
+    };
+
+    const isNew = !categoryDraft.id;
+
+    const result = isNew
+      ? await supabase.from("categories").insert({
+          id: createCategoryId(nameIt),
+          ...payload,
+        })
+      : await supabase
+          .from("categories")
+          .update(payload)
+          .eq("id", categoryDraft.id);
+
+    setCategoryBusy(false);
+
+    if (result.error) {
+      toast.error(
+        result.error.code === "23505"
+          ? "Esiste già una categoria con questo identificativo."
+          : result.error.message,
+      );
+      return;
+    }
+
+    toast.success(isNew ? "Categoria creata" : "Categoria aggiornata");
+    setCategoryDraft(null);
+
+    await qc.invalidateQueries({ queryKey: ["categories"] });
+  };
+
+  const deleteCategory = async (category: (typeof categoryRows)[number]) => {
+    const count = data.filter(
+      (dish) => dish.category === category.id,
+    ).length;
+
+    if (count > 0) {
+      toast.error(
+        `Non puoi eliminare questa categoria: contiene ${count} ${
+          count === 1 ? "piatto" : "piatti"
+        }. Sposta prima i piatti in un'altra categoria.`,
+      );
+      return;
+    }
+
+    if (
+      !confirm(
+        `Eliminare definitivamente la categoria "${category.name_it}"?`,
+      )
+    ) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("categories")
+      .delete()
+      .eq("id", category.id);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Categoria eliminata");
+    await qc.invalidateQueries({ queryKey: ["categories"] });
+  };
+
+  const moveCategory = async (
+    index: number,
+    direction: "up" | "down",
+  ) => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+
+    if (targetIndex < 0 || targetIndex >= categoryRows.length) return;
+
+    const reordered = [...categoryRows];
+    [reordered[index], reordered[targetIndex]] = [
+      reordered[targetIndex],
+      reordered[index],
+    ];
+
+    const updates = reordered.map((category, position) =>
+      supabase
+        .from("categories")
+        .update({ sort_order: position })
+        .eq("id", category.id),
+    );
+
+    const results = await Promise.all(updates);
+    const failed = results.find((result) => result.error);
+
+    if (failed?.error) {
+      toast.error(failed.error.message);
+      return;
+    }
+
+    await qc.invalidateQueries({ queryKey: ["categories"] });
   };
 
   if (importing) {
@@ -483,7 +649,7 @@ function Editor() {
                 Tutti
               </button>
 
-              {categories.map((category) => (
+              {categoryRows.map((category) => (
                 <button
                   key={category.id}
                   type="button"
@@ -495,7 +661,7 @@ function Editor() {
                       : "border-white/[0.06] bg-[#152222] text-[#B5CBC9]",
                   )}
                 >
-                  {category.label.it
+                  {category.name_it
                     .replace(" & Tapas", "")
                     .replace(" & Pizze", "")
                     .replace(" & Burger", "")
@@ -549,7 +715,7 @@ function Editor() {
             ) : (
               <div className="flex flex-col gap-3">
                 {filteredDishes.map((dish) => {
-                  const category = categories.find(
+                  const category = categoryRows.find(
                     (item) => item.id === dish.category,
                   );
 
@@ -614,7 +780,7 @@ function Editor() {
 
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span className="text-[10px] font-medium text-[#B5CBC9]">
-                            {category?.label.it ?? dish.category}
+                            {category?.name_it ?? dish.category}
                           </span>
 
                           {dish.tag_it && (
@@ -662,70 +828,300 @@ function Editor() {
         {/* SCHEDA CATEGORIE */}
         {tab === "categories" && (
           <section className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.06] bg-[#111E1E] p-4">
+            {/* INTESTAZIONE CATEGORIE */}
+            <div className="flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-[#111E1E] p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <h2 className="font-display text-lg font-medium text-white">
                   Sezioni del Menù
                 </h2>
-                <p className="mt-1 text-xs text-[#B5CBC9]">
-                  Le categorie attualmente configurate nel menu.
+                <p className="mt-1 text-xs leading-relaxed text-[#B5CBC9]">
+                  Trascina per riordinare, modifica e configura le portate
                 </p>
               </div>
 
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#1F2C2C] text-[#D8E9AC]">
-                <LayoutGrid className="h-5 w-5" />
-              </span>
+              <button
+                type="button"
+                onClick={openNewCategory}
+                className={`${primaryButton} w-full shrink-0 sm:w-auto`}
+              >
+                <Plus className="h-4 w-4" />
+                Nuova Categoria
+              </button>
             </div>
 
-            <div className="flex flex-col gap-2.5">
-              {categories.map((category, index) => {
-                const count = data.filter(
-                  (dish) => dish.category === category.id,
-                ).length;
+            {/* ELENCO CATEGORIE */}
+            {categoriesLoading ? (
+              <div className="rounded-2xl border border-white/[0.06] bg-[#111E1E] py-12 text-center text-sm text-[#B5CBC9]">
+                Caricamento categorie…
+              </div>
+            ) : categoriesError ? (
+              <div className="rounded-2xl border border-[#FFB4AB]/20 bg-[#111E1E] p-4 text-sm text-[#FFB4AB]">
+                Non è stato possibile caricare le categorie. Verifica la
+                connessione e riprova.
+              </div>
+            ) : categoryRows.length === 0 ? (
+              <div className="rounded-2xl border border-white/[0.06] bg-[#111E1E] px-4 py-10 text-center">
+                <LayoutGrid className="mx-auto mb-3 h-8 w-8 text-[#D8E9AC]" />
+                <p className="font-display text-lg text-white">
+                  Nessuna categoria
+                </p>
+                <p className="mt-1 text-xs text-[#B5CBC9]">
+                  Crea la prima categoria per organizzare il menù.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {categoryRows.map((category, index) => {
+                  const count = data.filter(
+                    (dish) => dish.category === category.id,
+                  ).length;
 
-                return (
-                  <article
-                    key={category.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-[#152222] p-3.5"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-[#1F2C2C] text-xs font-bold text-[#D8E9AC]">
-                        {index + 1}
-                      </div>
-
-                      <div className="min-w-0">
-                        <h3 className="truncate font-display text-base font-medium text-white">
-                          {category.label.it}
-                        </h3>
-                        <p className="mt-0.5 text-[11px] text-[#B5CBC9]">
-                          {count} {count === 1 ? "piatto" : "piatti"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCategoryFilter(category.id);
-                        setTab("dishes");
-                      }}
-                      aria-label={`Visualizza i piatti della categoria ${category.label.it}`}
-                      className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#1F2C2C] text-[#D8E9AC] transition hover:bg-[#2A3737]"
+                  return (
+                    <article
+                      key={category.id}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-[#152222] p-3.5 sm:p-4"
                     >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </article>
-                );
-              })}
-            </div>
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-[#1F2C2C] text-sm font-bold text-[#D8E9AC]">
+                          {String(index + 1).padStart(2, "0")}
+                        </div>
 
-            <p className="rounded-xl border border-[#D8E9AC]/15 bg-[#111E1E] p-3 text-[11px] leading-relaxed text-[#B5CBC9]">
-              Le categorie sono attualmente definite nella configurazione
-              dell'applicazione. La creazione, la modifica e il riordino
-              saranno attivati dopo aver predisposto la gestione delle
-              categorie nel database.
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate font-display text-base font-medium text-white">
+                            {category.name_it}
+                          </h3>
+
+                          <p className="mt-0.5 truncate text-[11px] text-[#B5CBC9]">
+                            {category.description_it || "Nessuna descrizione"}
+                          </p>
+
+                          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-medium text-[#D8E9AC]">
+                              {count} {count === 1 ? "piatto" : "piatti"}
+                            </span>
+                            <span className="text-[10px] text-[#B5CBC9]/60">
+                              · {category.name_en}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-1">
+                        <div className="flex flex-col gap-1">
+                          <button
+                            type="button"
+                            onClick={() => void moveCategory(index, "up")}
+                            disabled={index === 0}
+                            aria-label={`Sposta ${category.name_it} in alto`}
+                            title="Sposta in alto"
+                            className="grid h-7 w-7 place-items-center rounded-lg bg-[#1F2C2C] text-[#D8E9AC] transition hover:bg-[#2A3737] disabled:cursor-not-allowed disabled:opacity-25"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => void moveCategory(index, "down")}
+                            disabled={index === categoryRows.length - 1}
+                            aria-label={`Sposta ${category.name_it} in basso`}
+                            title="Sposta in basso"
+                            className="grid h-7 w-7 place-items-center rounded-lg bg-[#1F2C2C] text-[#D8E9AC] transition hover:bg-[#2A3737] disabled:cursor-not-allowed disabled:opacity-25"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openEditCategory({
+                              id: category.id,
+                              name_it: category.name_it,
+                              name_en: category.name_en,
+                              description_it: category.description_it,
+                              description_en: category.description_en,
+                              sort_order: category.sort_order,
+                            })
+                          }
+                          aria-label={`Modifica ${category.name_it}`}
+                          title="Modifica categoria"
+                          className="grid h-9 w-9 place-items-center rounded-xl bg-[#1F2C2C] text-[#D8E9AC] transition hover:bg-[#2A3737]"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => void deleteCategory(category)}
+                          aria-label={`Elimina ${category.name_it}`}
+                          title="Elimina categoria"
+                          className="grid h-9 w-9 place-items-center rounded-xl bg-[#1F2C2C] text-[#FFB4AB] transition hover:bg-[#3A2022]"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+
+            <p className="px-1 text-[10px] leading-relaxed text-[#B5CBC9]/65">
+              Le categorie sono condivise con il menù digitale. Le modifiche
+              vengono salvate nel database e sono visibili anche nella
+              consultazione pubblica dopo l'aggiornamento dei relativi
+              componenti.
             </p>
           </section>
+        )}
+
+        {/* MODALE NUOVA / MODIFICA CATEGORIA */}
+        {categoryDraft && (
+          <div
+            className="fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-5"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget && !categoryBusy) {
+                setCategoryDraft(null);
+              }
+            }}
+          >
+            <form
+              onSubmit={saveCategory}
+              className="my-auto w-full max-w-lg space-y-5 rounded-t-3xl border border-white/[0.08] bg-[#111E1E] p-5 shadow-2xl sm:rounded-2xl sm:p-6"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="font-display text-xl font-semibold text-white">
+                    {categoryDraft.id
+                      ? "Modifica Categoria Portata"
+                      : "Nuova Categoria Portata"}
+                  </h2>
+                  <p className="mt-1 text-xs text-[#B5CBC9]">
+                    {categoryDraft.id
+                      ? "Aggiorna le informazioni della sezione"
+                      : "Configurazione sezione per il menù digitale"}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCategoryDraft(null)}
+                  disabled={categoryBusy}
+                  aria-label="Chiudi"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#1F2C2C] text-[#B5CBC9] transition hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#D7E5E5]">
+                    Nome Categoria (IT) *
+                  </label>
+                  <input
+                    autoFocus
+                    required
+                    maxLength={80}
+                    className={input}
+                    placeholder="Es. Antipasti & Tapas"
+                    value={categoryDraft.name_it}
+                    onChange={(e) =>
+                      setCategoryDraft({
+                        ...categoryDraft,
+                        name_it: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#D7E5E5]">
+                    Category Name (EN) *
+                  </label>
+                  <input
+                    required
+                    maxLength={80}
+                    className={input}
+                    placeholder="E.g. Starters & Tapas"
+                    value={categoryDraft.name_en}
+                    onChange={(e) =>
+                      setCategoryDraft({
+                        ...categoryDraft,
+                        name_en: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#D7E5E5]">
+                    Storytelling / Sottotitolo (IT)
+                  </label>
+                  <textarea
+                    rows={3}
+                    maxLength={300}
+                    className={`${input} resize-y`}
+                    placeholder="Breve descrizione della categoria..."
+                    value={categoryDraft.description_it}
+                    onChange={(e) =>
+                      setCategoryDraft({
+                        ...categoryDraft,
+                        description_it: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#D7E5E5]">
+                    Storytelling / Subtitle (EN)
+                  </label>
+                  <textarea
+                    rows={3}
+                    maxLength={300}
+                    className={`${input} resize-y`}
+                    placeholder="Short description of the category..."
+                    value={categoryDraft.description_en}
+                    onChange={(e) =>
+                      setCategoryDraft({
+                        ...categoryDraft,
+                        description_en: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 border-t border-white/[0.06] pt-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  disabled={categoryBusy}
+                  onClick={() => setCategoryDraft(null)}
+                  className="min-h-11 rounded-xl border border-white/[0.08] px-5 text-xs font-semibold text-[#B5CBC9] transition hover:bg-[#1F2C2C]"
+                >
+                  Annulla
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={categoryBusy}
+                  className={primaryButton}
+                >
+                  {categoryBusy ? (
+                    "Salvataggio…"
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" />
+                      {categoryDraft.id
+                        ? "Salva Modifiche"
+                        : "Crea Categoria"}
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         )}
 
         {/* SCHEDA MENU */}
@@ -763,4 +1159,16 @@ function Editor() {
       </main>
     </div>
   );
+}
+
+function createCategoryId(name: string) {
+  const slug = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return `${slug || "categoria"}-${Math.random().toString(36).slice(2, 7)}`;
 }
