@@ -6,7 +6,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
-  CirclePlus,
+  FileUp,
   Pencil,
   Plus,
   Search,
@@ -22,6 +22,10 @@ import { cn } from "@/lib/utils";
 
 type MenuRow = Database["public"]["Tables"]["menus"]["Row"];
 
+type AdminMenusProps = {
+  onUploadPdf?: () => void;
+};
+
 const input =
   "mt-1 w-full rounded-xl border border-white/10 bg-[#132726] px-3.5 py-3 text-sm text-[#EEEEEE] placeholder:text-[#999999] outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
 
@@ -29,7 +33,7 @@ const primaryButton =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#D8E9AC] px-5 text-xs font-bold uppercase tracking-wider text-[#0B1818] transition active:scale-[0.98] disabled:opacity-50";
 
 const secondaryButton =
-  "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#152222] px-4 text-xs font-semibold text-[#D7E5E5] transition hover:border-[#D8E9AC] active:scale-[0.98]";
+  "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#152222] px-4 text-xs font-semibold text-[#D7E5E5] transition hover:border-[#D8E9AC]";
 
 const makeSlug = (value: string) =>
   value
@@ -39,7 +43,7 @@ const makeSlug = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
-function AdminMenus() {
+function AdminMenus({ onUploadPdf }: AdminMenusProps) {
   const qc = useQueryClient();
 
   const { data: menus = [], isLoading: menusLoading } = useQuery({
@@ -58,6 +62,18 @@ function AdminMenus() {
 
   const { data: dishes = [], isLoading: dishesLoading } =
     useQuery(allDishesQuery);
+
+  const { data: menuDishRows = [] } = useQuery({
+    queryKey: ["menu-dish-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("menu_dishes")
+        .select("menu_id, dish_id");
+
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const [selectedId, setSelectedId] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -99,6 +115,9 @@ function AdminMenus() {
     }
   }, [menus, selectedId]);
 
+  const getDishCount = (menuId: string) =>
+    menuDishRows.filter((row) => row.menu_id === menuId).length;
+
   const resetForm = () => {
     setEditingId(null);
     setNameIt("");
@@ -130,22 +149,22 @@ function AdminMenus() {
 
   const refreshMenus = async () => {
     await qc.invalidateQueries({ queryKey: ["menus"] });
-    await qc.invalidateQueries({ queryKey: ["menus", "admin"] });
-    await qc.invalidateQueries({ queryKey: ["menus", "active"] });
+    await qc.invalidateQueries({ queryKey: ["menu-dish-counts"] });
+    await qc.invalidateQueries({ queryKey: ["menu-assignments"] });
   };
 
   const saveMenu = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!nameIt.trim() || !nameEn.trim()) {
-      toast.error("Inserisci il nome del menu in entrambe le lingue");
+      toast.error("Inserisci il nome del menù in entrambe le lingue");
       return;
     }
 
     const finalSlug = makeSlug(slug || nameIt);
 
     if (!finalSlug) {
-      toast.error("Inserisci un nome valido per il menu");
+      toast.error("Inserisci un nome valido per il menù");
       return;
     }
 
@@ -173,9 +192,8 @@ function AdminMenus() {
       return;
     }
 
-    toast.success(editingId ? "Menu aggiornato" : "Menu creato");
+    toast.success(editingId ? "Menù aggiornato" : "Menù creato");
     resetForm();
-
     await refreshMenus();
   };
 
@@ -194,7 +212,9 @@ function AdminMenus() {
     }
 
     toast.success(
-      menu.is_active ? "Menu disattivato" : "Menu attivato",
+      menu.is_active
+        ? "Menù nascosto ai clienti"
+        : "Menù visibile ai clienti",
     );
 
     await refreshMenus();
@@ -203,7 +223,7 @@ function AdminMenus() {
   const deleteMenu = async (menu: MenuRow) => {
     if (
       !confirm(
-        `Eliminare il menu "${menu.name_it}"?\n\nI piatti non verranno eliminati.`,
+        `Eliminare il menù "${menu.name_it}"?\n\nI piatti non verranno eliminati.`,
       )
     ) {
       return;
@@ -237,10 +257,8 @@ function AdminMenus() {
     if (selectedId === menu.id) setSelectedId("");
     if (editingId === menu.id) resetForm();
 
-    toast.success("Menu eliminato");
-
+    toast.success("Menù eliminato");
     await refreshMenus();
-    await qc.invalidateQueries({ queryKey: ["menu-assignments"] });
   };
 
   const toggleDish = async (dish: DishRow) => {
@@ -275,15 +293,13 @@ function AdminMenus() {
     await qc.invalidateQueries({
       queryKey: ["menu-assignments", selectedId],
     });
-
-    await qc.invalidateQueries({
-      queryKey: ["menu-dishes", selectedId],
-    });
+    await qc.invalidateQueries({ queryKey: ["menu-dish-counts"] });
+    await qc.invalidateQueries({ queryKey: ["menu-dishes", selectedId] });
 
     toast.success(
       alreadyAssigned
-        ? "Piatto rimosso dal menu"
-        : "Piatto aggiunto al menu",
+        ? "Piatto rimosso dal menù"
+        : "Piatto aggiunto al menù",
     );
   };
 
@@ -297,58 +313,56 @@ function AdminMenus() {
     );
   });
 
-  const activeCount = menus.filter((menu) => menu.is_active).length;
-
   if (menusLoading) {
     return (
       <div className="rounded-2xl bg-[#111E1E] px-5 py-12 text-center text-sm text-[#999999]">
-        Caricamento menu…
+        Caricamento menù…
       </div>
     );
   }
 
   return (
-    <section className="space-y-6 text-[#D7E5E5]">
-
-      {/* Riepilogo */}
-      <div>
-        <div className="flex items-start justify-between gap-3">
+    <section className="space-y-5 text-[#D7E5E5]">
+      {/* Intestazione della sezione */}
+      <div className="rounded-2xl border border-white/[0.06] bg-[#111E1E] p-5 sm:p-6">
+        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
           <div>
-            <h2 className="font-display text-2xl font-semibold text-white">
-              Gestione Menù
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#D8E9AC]">
+              Area amministrativa
+            </p>
+            <h2 className="mt-2 font-display text-2xl font-semibold text-white">
+              Menù del Ristorante
             </h2>
-            <p className="mt-1 text-xs leading-5 text-[#B5CBC9]">
-              Organizza le carte e scegli i piatti da proporre ai clienti.
+            <p className="mt-2 text-xs leading-5 text-[#B5CBC9]">
+              Carte tematiche, degustazioni e visibilità QR
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={startNew}
-            className={cn(primaryButton, "shrink-0")}
-          >
-            <Plus className="h-4 w-4" />
-            Nuovo
-          </button>
-        </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (onUploadPdf) {
+                  onUploadPdf();
+                } else {
+                  toast.error("Collegamento all'importazione PDF da completare");
+                }
+              }}
+              className={secondaryButton}
+            >
+              <FileUp className="h-4 w-4 text-[#D8E9AC]" />
+              Carica Menù PDF
+            </button>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-[#111E1E] p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#999999]">
-              Menu totali
-            </p>
-            <p className="mt-2 font-display text-3xl text-white">
-              {menus.length}
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-[#111E1E] p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#999999]">
-              Menu attivi
-            </p>
-            <p className="mt-2 font-display text-3xl text-[#D8E9AC]">
-              {activeCount}
-            </p>
+            <button
+              type="button"
+              onClick={startNew}
+              aria-label="Crea nuovo menù"
+              title="Crea nuovo menù"
+              className="grid h-11 w-11 place-items-center rounded-xl bg-[#D8E9AC] text-[#0B1818] transition hover:brightness-110"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>
@@ -454,10 +468,10 @@ function AdminMenus() {
           <label className="flex items-center justify-between gap-3 rounded-xl bg-[#152222] p-3">
             <span>
               <span className="block text-xs font-semibold text-white">
-                Menu attivo
+                Visibile ai clienti
               </span>
               <span className="mt-1 block text-[10px] text-[#999999]">
-                Visibile ai clienti nel menu pubblico.
+                Attiva o nascondi questo menù nella pagina pubblica.
               </span>
             </span>
 
@@ -478,11 +492,7 @@ function AdminMenus() {
               Annulla
             </button>
 
-            <button
-              type="submit"
-              disabled={busy}
-              className={primaryButton}
-            >
+            <button type="submit" disabled={busy} className={primaryButton}>
               <Check className="h-4 w-4" />
               {busy
                 ? "Salvataggio…"
@@ -494,25 +504,30 @@ function AdminMenus() {
         </form>
       )}
 
-      {/* Elenco menu */}
+      {/* Elenco dei menù reali */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-lg text-white">
-            I tuoi Menù
-          </h3>
-          <span className="rounded-full bg-[#152222] px-3 py-1 text-[10px] font-bold text-[#D8E9AC]">
-            {menus.length} configurati
+        <div className="flex items-center justify-between px-1">
+          <div>
+            <h3 className="font-display text-lg text-white">
+              Le tue carte
+            </h3>
+            <p className="mt-1 text-[11px] text-[#999999]">
+              Gestisci contenuti e pubblicazione dei menù
+            </p>
+          </div>
+          <span className="rounded-full border border-white/10 bg-[#152222] px-3 py-1.5 text-[10px] font-semibold text-[#D8E9AC]">
+            {menus.length} {menus.length === 1 ? "menù" : "menù"}
           </span>
         </div>
 
         {menus.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 bg-[#111E1E] px-5 py-10 text-center">
+          <div className="rounded-2xl border border-dashed border-white/10 bg-[#111E1E] px-5 py-12 text-center">
             <UtensilsCrossed className="mx-auto h-8 w-8 text-[#D8E9AC]" />
             <p className="mt-3 text-sm font-semibold text-white">
               Nessun menù configurato
             </p>
             <p className="mt-1 text-xs text-[#999999]">
-              Crea il tuo primo menù per iniziare.
+              Crea il primo menù del ristorante per iniziare.
             </p>
             <button
               type="button"
@@ -527,6 +542,7 @@ function AdminMenus() {
           <div className="space-y-3">
             {menus.map((menu) => {
               const selected = selectedId === menu.id;
+              const dishCount = getDishCount(menu.id);
 
               return (
                 <article
@@ -534,11 +550,11 @@ function AdminMenus() {
                   className={cn(
                     "overflow-hidden rounded-2xl border bg-[#111E1E] transition",
                     selected
-                      ? "border-[#D8E9AC]/50"
+                      ? "border-[#D8E9AC]/40"
                       : "border-white/[0.07]",
                   )}
                 >
-                  <div className="p-4">
+                  <div className="p-4 sm:p-5">
                     <div className="flex items-start gap-3">
                       <button
                         type="button"
@@ -557,22 +573,21 @@ function AdminMenus() {
                               "rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider",
                               menu.is_active
                                 ? "bg-[#D8E9AC]/15 text-[#D8E9AC]"
-                                : "bg-[#252D2D] text-[#999999]",
+                                : "bg-[#343B38] text-[#A5AAA5]",
                             )}
                           >
-                            {menu.is_active ? "Attivo" : "Disattivato"}
+                            {menu.is_active ? "Visibile Ospiti" : "Nascosto Ospiti"}
                           </span>
                         </div>
 
                         <p className="mt-1 text-xs text-[#B5CBC9]">
-                          {menu.name_en}
+                          {menu.description_it || menu.name_en}
                         </p>
 
-                        {menu.description_it && (
-                          <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-[#999999]">
-                            {menu.description_it}
-                          </p>
-                        )}
+                        <p className="mt-3 flex items-center gap-2 text-[10px] text-[#999999]">
+                          <UtensilsCrossed className="h-3.5 w-3.5 text-[#D8E9AC]" />
+                          {dishCount} {dishCount === 1 ? "piatto associato" : "piatti associati"}
+                        </p>
                       </button>
 
                       <button
@@ -580,11 +595,7 @@ function AdminMenus() {
                         onClick={() =>
                           setSelectedId(selected ? "" : menu.id)
                         }
-                        aria-label={
-                          selected
-                            ? "Chiudi dettagli"
-                            : "Apri dettagli"
-                        }
+                        aria-label={selected ? "Chiudi dettagli" : "Apri dettagli"}
                         className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#152222] text-[#D8E9AC]"
                       >
                         {selected ? (
@@ -595,7 +606,7 @@ function AdminMenus() {
                       </button>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
                       <button
                         type="button"
                         onClick={() => toggleActive(menu)}
@@ -604,9 +615,7 @@ function AdminMenus() {
                         <span
                           className={cn(
                             "relative h-5 w-9 rounded-full transition",
-                            menu.is_active
-                              ? "bg-[#D8E9AC]"
-                              : "bg-[#45483D]",
+                            menu.is_active ? "bg-[#D8E9AC]" : "bg-[#45483D]",
                           )}
                         >
                           <span
@@ -616,7 +625,7 @@ function AdminMenus() {
                             )}
                           />
                         </span>
-                        {menu.is_active ? "Attivo" : "Non attivo"}
+                        QR Ospiti
                       </button>
 
                       <div className="flex items-center gap-2">
@@ -624,7 +633,7 @@ function AdminMenus() {
                           type="button"
                           onClick={() => startEdit(menu)}
                           className="grid h-9 w-9 place-items-center rounded-xl bg-[#152222] text-[#B5CBC9] transition hover:text-[#D8E9AC]"
-                          aria-label="Modifica menu"
+                          aria-label="Modifica menù"
                           title="Modifica"
                         >
                           <Pencil className="h-4 w-4" />
@@ -635,7 +644,7 @@ function AdminMenus() {
                           onClick={() => deleteMenu(menu)}
                           disabled={busy}
                           className="grid h-9 w-9 place-items-center rounded-xl bg-[#152222] text-[#B5CBC9] transition hover:text-[#FFB4AB]"
-                          aria-label="Elimina menu"
+                          aria-label="Elimina menù"
                           title="Elimina"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -646,7 +655,7 @@ function AdminMenus() {
 
                   {/* Associazione piatti */}
                   {selected && (
-                    <div className="border-t border-white/[0.07] bg-[#0D1B1B] p-4">
+                    <div className="border-t border-white/[0.07] bg-[#0D1B1B] p-4 sm:p-5">
                       <button
                         type="button"
                         onClick={() =>
@@ -673,9 +682,8 @@ function AdminMenus() {
                       {showAssignments && (
                         <div className="mt-4">
                           <p className="mb-3 text-xs leading-5 text-[#999999]">
-                            Seleziona i piatti da includere in questo
-                            menù. Uno stesso piatto può appartenere
-                            contemporaneamente a più menù.
+                            Seleziona i piatti da includere in questo menù.
+                            Uno stesso piatto può appartenere a più menù.
                           </p>
 
                           <div className="relative">
@@ -770,17 +778,6 @@ function AdminMenus() {
           </div>
         )}
       </div>
-
-      {!showForm && (
-        <button
-          type="button"
-          onClick={startNew}
-          className={cn(primaryButton, "min-h-12 w-full")}
-        >
-          <CirclePlus className="h-4 w-4" />
-          Crea un nuovo menù
-        </button>
-      )}
     </section>
   );
 }
