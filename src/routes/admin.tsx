@@ -7,16 +7,13 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
-  ChevronRight,
-  Eye,
-  FileUp,
   LayoutGrid,
-  LogOut,
   Pencil,
   Plus,
   Search,
   Trash2,
   UtensilsCrossed,
+  UserRound,
   X,
 } from "lucide-react";
 
@@ -511,12 +508,12 @@ function Editor() {
   return (
     <div className="min-h-screen bg-[#081616] font-body text-[#D7E5E5]">
       {/* HEADER */}
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.06] bg-[#081616]/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-2 px-4 sm:px-6">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.06] bg-[#081616]/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+        <div className="flex h-16 items-center justify-between gap-2 px-4">
           <div className="flex min-w-0 items-center gap-2">
             <Link
               to="/"
-              className="truncate font-display text-xl font-semibold tracking-tight text-white"
+              className="truncate font-display text-lg font-semibold tracking-tight text-white"
             >
               L'Horloge
             </Link>
@@ -543,15 +540,15 @@ function Editor() {
               }}
               aria-label="Esci dall'area amministrazione"
               title="Esci"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#D8E9AC] text-[#081616] transition hover:scale-105"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-[#283509] transition hover:scale-105"
             >
-              <LogOut className="h-4 w-4" />
+              <UserRound className="h-[18px] w-[18px]" />
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 pb-16 pt-[calc(5rem+env(safe-area-inset-top))] sm:px-6">
+      <main className="flex w-full flex-1 flex-col gap-5 bg-[#081616] px-4 pb-16 pt-[calc(5rem+env(safe-area-inset-top))]">
         {/* TITOLO PAGINA */}
         <section className="flex items-end justify-between gap-2 pt-1">
           <div>
@@ -582,10 +579,10 @@ function Editor() {
               type="button"
               onClick={() => setTab(id)}
               className={cn(
-                "flex min-h-11 items-center justify-center rounded-full px-2 text-xs font-semibold tracking-wide transition-all",
+                "flex min-h-10 items-center justify-center rounded-full px-2 text-xs tracking-wide transition-all",
                 tab === id
-                  ? "bg-[#D8E9AC] text-[#151F00] shadow-sm"
-                  : "text-[#B5CBC9] hover:text-white",
+                  ? "bg-[#D8E9AC] font-bold text-[#151F00] shadow-sm"
+                  : "font-medium text-[#B5CBC9] hover:text-white",
               )}
             >
               {label}
@@ -826,7 +823,7 @@ function Editor() {
         {tab === "categories" && (
           <section className="flex flex-col gap-4">
             {/* INTESTAZIONE CATEGORIE */}
-            <div className="flex flex-col gap-4 rounded-2xl border border-white/[0.06] bg-[#111E1E] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.06] bg-[#111E1E] p-4">
               <div className="min-w-0">
                 <h2 className="font-display text-lg font-medium text-white">
                   Sezioni del Menù
@@ -839,9 +836,9 @@ function Editor() {
               <button
                 type="button"
                 onClick={openNewCategory}
-                className={`${primaryButton} w-full shrink-0 sm:w-auto`}
+                className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-[#D8E9AC] px-4 text-xs font-bold text-[#151F00] shadow-[0_4px_16px_rgba(216,233,172,0.18)] transition active:scale-95"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-[18px] w-[18px]" />
                 Nuova Categoria
               </button>
             </div>
@@ -876,57 +873,48 @@ function Editor() {
                   return (
                     <article
                       key={category.id}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-[#152222] p-3.5 sm:p-4"
+                      className="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.07] bg-[#152222] p-3.5"
                     >
                       <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-[#1F2C2C] text-sm font-bold text-[#D8E9AC]">
-                          {String(index + 1).padStart(2, "0")}
+                        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-[#1F2C2C] text-xs font-bold text-[#D8E9AC]">
+                          {index + 1}
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                          <h3 className="truncate font-display text-base font-medium text-white">
+                        <div className="min-w-0">
+                          <p className="truncate font-display text-base font-medium text-white">
                             {category.name_it}
-                          </h3>
-
-                          <p className="mt-0.5 truncate text-[11px] text-[#B5CBC9]">
-                            {category.description_it || "Nessuna descrizione"}
                           </p>
-
-                          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                            <span className="text-[10px] font-medium text-[#D8E9AC]">
-                              {count} {count === 1 ? "piatto" : "piatti"}
-                            </span>
-                            <span className="text-[10px] text-[#B5CBC9]/60">
-                              · {category.name_en}
-                            </span>
-                          </div>
+                          <p className="truncate text-[11px] text-[#B5CBC9]">
+                            {count} {count === 1 ? "piatto" : "piatti"}
+                            {category.description_it
+                              ? ` • ${category.description_it}`
+                              : ""}
+                          </p>
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 items-center gap-1">
-                        <div className="flex flex-col gap-1">
-                          <button
-                            type="button"
-                            onClick={() => void moveCategory(index, "up")}
-                            disabled={index === 0}
-                            aria-label={`Sposta ${category.name_it} in alto`}
-                            title="Sposta in alto"
-                            className="grid h-7 w-7 place-items-center rounded-lg bg-[#1F2C2C] text-[#D8E9AC] transition hover:bg-[#2A3737] disabled:cursor-not-allowed disabled:opacity-25"
-                          >
-                            <ArrowUp className="h-3.5 w-3.5" />
-                          </button>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => void moveCategory(index, "up")}
+                          disabled={index === 0}
+                          aria-label={`Sposta ${category.name_it} in alto`}
+                          title="Sposta su"
+                          className="grid h-8 w-8 place-items-center rounded-full border border-white/[0.06] bg-[#1F2C2C] text-[#B5CBC9] transition hover:bg-[#2A3737] disabled:opacity-30"
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </button>
 
-                          <button
-                            type="button"
-                            onClick={() => void moveCategory(index, "down")}
-                            disabled={index === categoryRows.length - 1}
-                            aria-label={`Sposta ${category.name_it} in basso`}
-                            title="Sposta in basso"
-                            className="grid h-7 w-7 place-items-center rounded-lg bg-[#1F2C2C] text-[#D8E9AC] transition hover:bg-[#2A3737] disabled:cursor-not-allowed disabled:opacity-25"
-                          >
-                            <ArrowDown className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void moveCategory(index, "down")}
+                          disabled={index === categoryRows.length - 1}
+                          aria-label={`Sposta ${category.name_it} in basso`}
+                          title="Sposta giù"
+                          className="grid h-8 w-8 place-items-center rounded-full border border-white/[0.06] bg-[#1F2C2C] text-[#B5CBC9] transition hover:bg-[#2A3737] disabled:opacity-30"
+                        >
+                          <ArrowDown className="h-4 w-4" />
+                        </button>
 
                         <button
                           type="button"
@@ -942,7 +930,7 @@ function Editor() {
                           }
                           aria-label={`Modifica ${category.name_it}`}
                           title="Modifica categoria"
-                          className="grid h-9 w-9 place-items-center rounded-xl bg-[#1F2C2C] text-[#D8E9AC] transition hover:bg-[#2A3737]"
+                          className="grid h-8 w-8 place-items-center rounded-full border border-white/[0.06] bg-[#1F2C2C] text-[#D8E9AC] transition hover:bg-[#2A3737]"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -952,7 +940,7 @@ function Editor() {
                           onClick={() => void deleteCategory(category)}
                           aria-label={`Elimina ${category.name_it}`}
                           title="Elimina categoria"
-                          className="grid h-9 w-9 place-items-center rounded-xl bg-[#1F2C2C] text-[#FFB4AB] transition hover:bg-[#3A2022]"
+                          className="grid h-8 w-8 place-items-center rounded-full border border-white/[0.06] bg-[#1F2C2C] text-[#FFB4AB] transition hover:bg-[#3A2022]"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -962,13 +950,6 @@ function Editor() {
                 })}
               </div>
             )}
-
-            <p className="px-1 text-[10px] leading-relaxed text-[#B5CBC9]/65">
-              Le categorie sono condivise con il menù digitale. Le modifiche
-              vengono salvate nel database e sono visibili anche nella
-              consultazione pubblica dopo l'aggiornamento dei relativi
-              componenti.
-            </p>
           </section>
         )}
 
@@ -1122,37 +1103,10 @@ function Editor() {
         )}
 
         {/* SCHEDA MENU */}
-        {tab === "menus" && <AdminMenus />}
+        {tab === "menus" && (
+          <AdminMenus onUploadPdf={() => setImporting(true)} />
+        )}
 
-        {/* AZIONI SECONDARIE */}
-        <section className="grid grid-cols-2 gap-2 border-t border-white/[0.06] pt-5">
-          <button
-            type="button"
-            onClick={() => window.open("/", "_blank")}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.07] bg-[#152222] px-3 text-xs font-semibold text-[#D8E9AC] transition hover:bg-[#1F2C2C]"
-          >
-            <Eye className="h-4 w-4" />
-            Anteprima
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setImporting(true)}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.07] bg-[#152222] px-3 text-xs font-semibold text-[#D8E9AC] transition hover:bg-[#1F2C2C]"
-          >
-            <FileUp className="h-4 w-4" />
-            Carica PDF
-          </button>
-        </section>
-
-        <footer className="pb-4 pt-2 text-center">
-          <p className="font-display text-sm tracking-wide text-[#B5CBC9]/60">
-            L'HORLOGE
-          </p>
-          <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-[#B5CBC9]/40">
-            Area Amministrazione
-          </p>
-        </footer>
       </main>
     </div>
   );
