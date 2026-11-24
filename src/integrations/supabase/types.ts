@@ -150,6 +150,8 @@ export type Database = {
           name_it: string
           slug: string
           sort_order: number
+          time: string
+          type: string
           updated_at: string
         }
         Insert: {
@@ -162,6 +164,8 @@ export type Database = {
           name_it: string
           slug: string
           sort_order?: number
+          time: string
+          type: string
           updated_at?: string
         }
         Update: {
@@ -174,6 +178,8 @@ export type Database = {
           name_it?: string
           slug?: string
           sort_order?: number
+          time?: string
+          type?: string
           updated_at?: string
         }
         Relationships: []
@@ -343,14 +349,14 @@ export type Enums<
   EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaWithoutInternals["schema"]]["Enums"]
     : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchema["Enums"][EnumName]
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaTableNameOrOptions]
     : never
 
 export type CompositeTypes<
@@ -367,7 +373,7 @@ export type CompositeTypes<
 }
   ? DatabaseWithoutInternals[DefaultSchemaCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : DefaultSchemaCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][DefaultSchemaCompositeTypeNameOrOptions]
+    ? DefaultSchema["CompositeTypes"][DefaultSchemaCompositeTypeName]
     : never
 
 export const Constants = {
