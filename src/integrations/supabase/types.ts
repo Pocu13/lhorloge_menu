@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -48,6 +49,7 @@ export type Database = {
       dishes: {
         Row: {
           allergens: string[]
+          allergens_checked: boolean
           category: string
           description_en: string
           description_it: string
@@ -77,6 +79,7 @@ export type Database = {
         }
         Insert: {
           allergens?: string[]
+          allergens_checked?: boolean
           category: string
           description_en?: string
           description_it?: string
@@ -106,6 +109,7 @@ export type Database = {
         }
         Update: {
           allergens?: string[]
+          allergens_checked?: boolean
           category?: string
           description_en?: string
           description_it?: string
@@ -275,8 +279,7 @@ export type Tables<
     : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
         DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
