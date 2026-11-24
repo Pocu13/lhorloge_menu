@@ -1,4 +1,3 @@
-
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useRef } from "react";
@@ -34,9 +33,6 @@ const categoryFilters: {
 const logoImage =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuDTXTdASEuKSSQxx_8Ix-8KoImuIvSi0WJZoZM4tfY1Cz2PTCPkary1-F3wZfkzVzFSEgLhr6yshJUgR019aanE9GyXPyNuLBlvUtYuPqPPn01pUr39IdMp7CWYy8Gah-56UwhyAi2mH3UWnpiLhYcRoU4pQLXOa258VRYruKSxDgx1ny77V7xR_ld86PrB2f8vQRRXGmfhFDeEgLD0sNON0_mhcxeOUjR21u7mwoVGbdYOVJt1XM3_";
 
-const heroImage =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuBfkL-S0hxM3G8JRjI-pm-oTCpbG2KMbykumiItQo6Fwi2MAGNy9nhWJrVEG6Hs-DupL6VVEFq0s-7tk_JUedIXG9pRC4z4KIu8vISBXIdRDhlb0t7ySOEyRXfpSvH09oWiAZKuPlMbrjG4WY3nqhKn2zQhocSk4cM8o3rRy-7lHCvqywjUTBv-sZlbh1YCtteYVHkSrPdiove8XvdTbdgu8k19OYGUyr-nOcMd7J5c_nXViUcHDsPp";
-
 export const Route = createFileRoute("/")({
   validateSearch: (
     search: Record<string, unknown>,
@@ -69,7 +65,8 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:description",
-        content: "Ogni piatto ha il suo tempo.",
+        content:
+          "Scopri il menu di L'Horloge e la nostra cucina siciliana contemporanea.",
       },
       {
         property: "og:type",
@@ -146,7 +143,6 @@ function Index() {
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-[#081616] font-body text-[#d7e5e5] antialiased">
-
       {/* HEADER */}
       <header className="sticky top-0 z-40 flex h-[72px] items-center justify-between border-b border-[#45483d]/40 bg-[#081616]/95 px-5 backdrop-blur-md md:px-8">
         <Link to="/" aria-label="L'Horloge">
@@ -183,38 +179,6 @@ function Index() {
       </header>
 
       <main>
-
-        {/* HERO */}
-        <section className="px-4 pb-6 pt-4 md:px-8">
-          <div className="relative flex min-h-[480px] w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#d8e9ac]/30 bg-[#111e1e] p-6 text-center md:min-h-[540px] md:p-10">
-            <div className="absolute inset-0">
-              <img
-                src={heroImage}
-                alt="L'Horloge Bistrot e Ristorante"
-                className="h-full w-full object-cover object-center"
-                fetchPriority="high"
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/25 to-[#081616]/90" />
-            </div>
-
-            <div className="relative z-10 flex max-w-2xl flex-col items-center gap-5 rounded-xl border border-white/10 bg-black/75 px-6 py-9 shadow-2xl backdrop-blur-sm sm:px-10 sm:py-12">
-              <h1 className="font-display text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl md:text-6xl">
-                {ui.heroA[lang]}
-                <br />
-                <span className="font-normal italic text-[#d8e9ac]">
-                  {ui.heroB[lang]}
-                </span>
-              </h1>
-
-              <p className="max-w-lg text-sm leading-relaxed text-white/90 sm:text-base">
-                {lang === "it"
-                  ? "Tra pietre vulcaniche e tempi pazienti di cottura e maturazione. Una ricerca gastronomica dove ogni secondo svela la materia pura."
-                  : "Between volcanic stones and patient cooking and ageing times. A gastronomic journey where every second reveals the pure essence of ingredients."}
-              </p>
-            </div>
-          </div>
-        </section>
-
         {/* SIGNATURE DISHES */}
         {signatureDishes.length > 0 && (
           <section className="py-7">
