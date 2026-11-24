@@ -2,7 +2,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Timer, Wine, UtensilsCrossed, MapPin, Clock } from "lucide-react";
+import {
+  Timer,
+  Wine,
+  UtensilsCrossed,
+  MapPin,
+  Clock,
+  ArrowRight,
+  Leaf,
+} from "lucide-react";
 import {
   categories,
   dietLabels,
@@ -30,6 +38,9 @@ import { cn } from "@/lib/utils";
 
 const catIds = ["all", ...categories.map((c) => c.id)] as const;
 type CatFilter = CategoryId | "all";
+
+const heroImage =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuBfkL-S0hxM3G8JRjI-pm-oTCpbG2KMbykumiItQo6Fwi2MAGNy9nhWJrVEG6Hs-DupL6VVEFq0s-7tk_JUedIXG9pRC4z4KIu8vISBXIdRDhlb0t7ySOEyRXfpSvH09oWiAZKuPlMbrjG4WY3nqhKn2zQhocSk4cM8o3rRy-7lHCvqywjUTBv-sZlbh1YCtteYVHkSrPdiove8XvdTbdgu8k19OYGUyr-nOcMd7J5c_nXViUcHDsPp";
 
 export const Route = createFileRoute("/")({
   validateSearch: (s: Record<string, unknown>): { cat?: CatFilter } => {
@@ -98,10 +109,13 @@ function Index() {
     .map(rowToDish)
     .filter((d) => diets.every((k) => d.diets.includes(k)));
 
-  const toggleDiet = (k: DietId) =>
-    setDiets((p) =>
-      p.includes(k) ? p.filter((x) => x !== k) : [...p, k],
+  const toggleDiet = (k: DietId) => {
+    setDiets((previous) =>
+      previous.includes(k)
+        ? previous.filter((item) => item !== k)
+        : [...previous, k],
     );
+  };
 
   const t = (k: keyof typeof ui) => ui[k][lang];
   const menuRef = useRef<HTMLDivElement>(null);
@@ -113,327 +127,458 @@ function Index() {
       resetScroll: false,
     });
 
-    const el = menuRef.current;
+    const element = menuRef.current;
 
-    if (el && el.getBoundingClientRect().top < 140) {
+    if (element && element.getBoundingClientRect().top < 140) {
       window.scrollTo({
-        top: el.getBoundingClientRect().top + window.scrollY - 150,
+        top: element.getBoundingClientRect().top + window.scrollY - 150,
         behavior: "smooth",
       });
     }
   };
 
-  const signatures = dishes.filter((d) => d.signature);
+  const signatures = dishes.filter((dish) => dish.signature);
+
   const visibleCats = categories.filter(
-    (c) => cat === "all" || c.id === cat,
+    (category) => cat === "all" || category.id === cat,
   );
 
-  const visibleCount = dishes.filter((d) =>
-    visibleCats.some((c) => c.id === d.category),
+  const visibleCount = dishes.filter((dish) =>
+    visibleCats.some((category) => category.id === dish.category),
   ).length;
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
-      <div className="pointer-events-none fixed -top-40 left-1/2 h-[520px] w-[720px] -translate-x-1/2 ambient-glow" />
+    <div className="relative min-h-screen overflow-x-hidden bg-[#081616] text-[#d7e5e5]">
+      <div className="pointer-events-none fixed -top-48 left-1/2 z-0 h-[560px] w-[850px] -translate-x-1/2 rounded-full bg-[#d8e9ac]/[0.035] blur-[130px]" />
 
-      <SiteHeader />
+      <div className="relative z-10">
+        <SiteHeader />
 
-      <main>
-        <section className="mx-auto max-w-6xl px-6 pb-12 pt-16 text-center">
-          <h1 className="mx-auto max-w-4xl font-display text-4xl leading-[1.15] tracking-tight text-title sm:text-5xl md:text-6xl">
-            {t("heroA")}{" "}
-            <span className="font-light italic text-sage">
-              {t("heroB")}
-            </span>
-          </h1>
+        <main>
+          {/* HERO */}
+          <section className="px-4 pb-8 pt-4 sm:px-6 md:px-8">
+            <div className="relative flex min-h-[490px] w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#d8e9ac]/20 bg-[#111e1e] px-5 py-12 text-center shadow-2xl sm:min-h-[530px] sm:px-8 md:min-h-[570px]">
+              <img
+                src={heroImage}
+                alt="L'Horloge Bistrot e Ristorante"
+                className="absolute inset-0 h-full w-full object-cover object-center brightness-[0.85]"
+                fetchPriority="high"
+              />
 
-          <p className="mx-auto mt-5 max-w-2xl text-sm font-light leading-relaxed text-muted-foreground sm:text-base md:text-lg">
-            {t("heroSub")}
-          </p>
-        </section>
+              <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-[#081616]/95" />
 
-        {signatures.length > 0 && (
-          <section className="mx-auto max-w-6xl px-5 py-10 sm:px-6">
-            <div className="mb-10 flex flex-col justify-between border-b border-border/40 pb-4 md:flex-row md:items-end">
-              <h2 className="font-display text-2xl text-title md:text-3xl">
-                {t("iconic")}
-              </h2>
+              <div className="relative z-10 my-auto flex w-full max-w-2xl flex-col items-center rounded-2xl border border-white/10 bg-black/65 px-6 py-9 shadow-2xl backdrop-blur-md sm:px-10 sm:py-12">
+                <span className="mb-5 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#d8e9ac] sm:text-xs">
+                  L'Horloge · Ristorante & Bistrot
+                </span>
 
-              <p className="mt-2 max-w-xs text-xs text-muted-foreground md:mt-0 md:text-right">
-                {t("iconicSub")}
-              </p>
-            </div>
+                <h1 className="font-display text-4xl font-semibold leading-[1.12] tracking-tight text-[#f5f5ed] sm:text-5xl md:text-6xl">
+                  {t("heroA")}
+                  <br />
+                  <span className="font-normal italic text-[#d8e9ac]">
+                    {t("heroB")}
+                  </span>
+                </h1>
 
-            <div className="grid grid-cols-1 gap-7 md:grid-cols-3">
-              {signatures.map((d) => (
-                <Link
-                  key={d.id}
-                  to="/piatto/$id"
-                  params={{ id: d.id }}
-                  className="group flex flex-col overflow-hidden rounded-lg border border-border/30 bg-card/80 transition-all duration-500 hover:border-sage/60 active:scale-[0.99]"
+                <div className="my-6 h-px w-16 bg-[#d8e9ac]/70" />
+
+                <p className="max-w-lg text-sm font-normal leading-7 text-white/85 sm:text-base">
+                  {t("heroSub")}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    document.getElementById("carta")?.scrollIntoView({
+                      behavior: "smooth",
+                    })
+                  }
+                  className="mt-8 inline-flex min-h-11 items-center gap-3 rounded-full bg-[#d8e9ac] px-6 py-3 text-xs font-bold uppercase tracking-[0.12em] text-[#081616] shadow-[0_4px_20px_rgba(216,233,172,0.18)] transition-all hover:scale-[1.03] hover:shadow-[0_4px_24px_rgba(216,233,172,0.28)]"
                 >
-                  <div className="relative aspect-[4/3] overflow-hidden bg-surface-low">
-                    {d.image && (
-                      <img
-                        src={d.image}
-                        alt={d.name[lang]}
-                        loading="lazy"
-                        className="h-full w-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105 group-hover:opacity-100"
-                      />
-                    )}
-
-                    <div className="absolute inset-0 image-fade" />
-
-                    <div className="absolute right-4 top-4 rounded-full border border-sage/40 bg-background/90 px-3 py-1 text-xs font-semibold tracking-wider text-sage backdrop-blur-md">
-                      {formatPrice(d.price, lang)}
-                    </div>
-
-                    <div className="absolute bottom-3 left-4 flex items-center gap-1.5 rounded bg-surface-high/80 px-2.5 py-1 text-xs text-foreground backdrop-blur-sm">
-                      <Timer className="h-3.5 w-3.5 text-sage" />
-                      {d.signature!.note[lang]}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-1 flex-col p-6">
-                    <h3 className="font-display text-lg text-title transition-colors group-hover:text-sage">
-                      {d.name[lang]}
-                    </h3>
-
-                    <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
-                      {d.description[lang]}
-                    </p>
-
-                    <div className="mt-5 flex items-center gap-2 border-t border-border/30 pt-4 text-xs text-muted-foreground">
-                      <Wine className="h-3.5 w-3.5 text-sage" />
-                      {d.signature!.pairing[lang]}
-                    </div>
-
-                    <div className="mt-3">
-                      <AllergenChips list={d.allergens} />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="mx-auto max-w-6xl px-5 pb-20 pt-14 sm:px-6">
-          <p className="mb-5 text-xs uppercase tracking-[0.3em] text-muted-foreground">
-            {t("fullMenu")}
-          </p>
-
-          {menus.length > 1 && (
-            <div className="mb-8">
-              <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {lang === "it" ? "Scegli il menu" : "Choose a menu"}
-              </p>
-
-              <div
-                className="flex flex-wrap gap-2"
-                role="group"
-                aria-label={lang === "it" ? "Seleziona menu" : "Select menu"}
-              >
-                {menus.map((menu) => {
-                  const isSelected = selectedMenu?.id === menu.id;
-                  const menuName =
-                    (lang === "it" ? menu.name_it : menu.name_en) ||
-                    menu.name_it ||
-                    menu.name_en;
-
-                  return (
-                    <button
-                      key={menu.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedMenuId(menu.id);
-                        setDiets([]);
-                        pickCat("all");
-                      }}
-                      aria-pressed={isSelected}
-                      className={cn(
-                        "min-h-11 rounded-full border px-5 py-2.5 text-sm font-medium transition-colors",
-                        isSelected
-                          ? "border-sage bg-sage text-sage-foreground"
-                          : "border-border/60 text-foreground hover:border-sage/60",
-                      )}
-                    >
-                      {menuName}
-                    </button>
-                  );
-                })}
+                  {lang === "it" ? "Scopri il menu" : "Explore the menu"}
+                  <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
 
-              {selectedMenu && (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  {lang === "it"
-                    ? selectedMenu.description_it
-                    : selectedMenu.description_en}
-                </p>
-              )}
+              <div className="pointer-events-none absolute bottom-5 left-0 right-0 z-10 flex justify-center">
+                <span className="text-[9px] font-medium uppercase tracking-[0.3em] text-white/55">
+                  {lang === "it" ? "La nostra cucina · Il nostro tempo" : "Our cuisine · Our time"}
+                </span>
+              </div>
             </div>
-          )}
+          </section>
 
-          <nav className="no-scrollbar sticky top-20 z-30 -mx-5 mb-8 flex snap-x gap-2 overflow-x-auto border-b border-border/30 bg-background/95 px-5 py-3 backdrop-blur-md sm:mx-0 sm:gap-3 sm:px-0">
-            {[{ id: "all" as const, label: ui.all }, ...categories].map(
-              (c) => (
-                <button
-                  key={c.id}
-                  onClick={() => pickCat(c.id)}
-                  aria-pressed={cat === c.id}
-                  className={cn(
-                    "min-h-11 shrink-0 snap-start rounded-full border px-5 py-2.5 text-xs font-medium uppercase tracking-wider transition-colors",
-                    cat === c.id
-                      ? "border-sage bg-sage text-sage-foreground"
-                      : "border-border/60 text-foreground hover:border-sage/60",
-                  )}
-                >
-                  {c.label[lang]}
-                </button>
-              ),
-            )}
-          </nav>
-
-          <div
-            className="-mt-4 mb-8 flex flex-wrap items-center gap-2"
-            role="group"
-            aria-label={dietUi.title[lang]}
-          >
-            {(Object.keys(dietLabels) as DietId[]).map((k) => {
-              const Icon = dietIcons[k];
-              const on = diets.includes(k);
-
-              return (
-                <button
-                  key={k}
-                  onClick={() => toggleDiet(k)}
-                  aria-pressed={on}
-                  className={cn(
-                    "flex min-h-10 items-center gap-1.5 rounded-full border px-4 text-xs transition-colors",
-                    on
-                      ? "border-sage bg-sage/15 text-sage"
-                      : "border-border/60 text-muted-foreground hover:border-sage/60",
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {dietLabels[k][lang]}
-                </button>
-              );
-            })}
-
-            <span className="ml-auto text-xs text-muted-foreground" aria-live="polite">
-              {dietUi.count[lang](visibleCount)}
-            </span>
-          </div>
-
-          {visibleCount === 0 && (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              {dietUi.empty[lang]}
-            </p>
-          )}
-
-          <div ref={menuRef} className="scroll-mt-40 space-y-14">
-            {visibleCats.map((c) => {
-              const list = dishes.filter((d) => d.category === c.id);
-
-              if (!list.length) return null;
-
-              return (
-                <div key={c.id}>
-                  <h3 className="mb-6 flex items-center gap-4 font-display text-2xl italic text-title">
-                    {c.label[lang]}
-                    <span className="h-px flex-1 bg-border/40" />
-                  </h3>
-
-                  <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                    {list.map((d) => (
-                      <Link
-                        key={d.id}
-                        to="/piatto/$id"
-                        params={{ id: d.id }}
-                        className="group flex gap-4 rounded-lg border border-border/30 bg-card/60 p-5 text-left transition-colors hover:border-sage/50 active:scale-[0.99] sm:gap-5"
-                      >
-                        <div className="h-24 w-24 shrink-0 overflow-hidden rounded bg-surface-low sm:h-28 sm:w-28">
-                          {d.image ? (
-                            <img
-                              src={d.image}
-                              alt={d.name[lang]}
-                              loading="lazy"
-                              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-sage/60">
-                              {c.id === "bevande" ? (
-                                <Wine className="h-7 w-7" />
-                              ) : (
-                                <UtensilsCrossed className="h-7 w-7" />
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex min-w-0 flex-1 flex-col">
-                          <div className="flex items-start justify-between gap-3">
-                            <h4 className="font-display text-lg leading-snug text-title transition-colors group-hover:text-sage">
-                              {d.name[lang]}
-                            </h4>
-
-                            <span className="shrink-0 font-display text-lg text-sage">
-                              {formatPrice(d.price, lang)}
-                            </span>
-                          </div>
-
-                          {d.tag[lang] && (
-                            <span className="mt-2 w-fit rounded border border-sage/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-sage">
-                              {d.tag[lang]}
-                            </span>
-                          )}
-
-                          <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-                            {d.description[lang]}
-                          </p>
-
-                          {d.diets.length > 0 && (
-                            <div className="mt-3">
-                              <DietBadges list={d.diets} />
-                            </div>
-                          )}
-
-                          <div className="mt-3">
-                            <AllergenChips list={d.allergens} />
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
+          {/* PIATTI ICONICI */}
+          {signatures.length > 0 && (
+            <section className="py-8 sm:py-10">
+              <div className="mb-6 flex items-end justify-between px-4 sm:px-6 md:px-8">
+                <div>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-[#d8e9ac] sm:text-xs">
+                    {lang === "it" ? "Selezione dello Chef" : "Chef's Selection"}
+                  </p>
+                  <h2 className="font-display text-2xl font-semibold text-[#f1f2e9] sm:text-3xl">
+                    {t("iconic")}
+                  </h2>
+                  <p className="mt-2 max-w-md text-xs leading-relaxed text-[#c6c8b9]/75 sm:text-sm">
+                    {t("iconicSub")}
+                  </p>
                 </div>
-              );
-            })}
+
+                <span className="hidden items-center gap-2 pb-1 text-[10px] uppercase tracking-widest text-[#c6c8b9]/65 sm:flex">
+                  {lang === "it" ? "Scorri" : "Scroll"}
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </div>
+
+              <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:px-6 md:px-8">
+                {signatures.map((dish) => (
+                  <Link
+                    key={dish.id}
+                    to="/piatto/$id"
+                    params={{ id: dish.id }}
+                    className="group flex w-[265px] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-[#45483d]/60 bg-[#152222] p-3 transition-all duration-300 hover:-translate-y-1 hover:border-[#d8e9ac]/50 hover:bg-[#1b2928] sm:w-[290px]"
+                  >
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-[#111e1e]">
+                      {dish.image ? (
+                        <img
+                          src={dish.image}
+                          alt={dish.name[lang]}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[#d8e9ac]/50">
+                          <UtensilsCrossed className="h-9 w-9" />
+                        </div>
+                      )}
+
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+
+                      <span className="absolute right-3 top-3 rounded-full border border-[#d8e9ac]/40 bg-[#081616]/85 px-3 py-1.5 text-xs font-semibold tabular-nums text-[#d8e9ac] backdrop-blur-md">
+                        {formatPrice(dish.price, lang)}
+                      </span>
+
+                      <span className="absolute bottom-3 left-3 inline-flex max-w-[85%] items-center gap-1.5 rounded-full border border-white/10 bg-black/65 px-3 py-1.5 text-[10px] text-white/90 backdrop-blur-md">
+                        <Timer className="h-3 w-3 shrink-0 text-[#d8e9ac]" />
+                        <span className="truncate">
+                          {dish.signature!.note[lang]}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="px-1 pb-1 pt-4">
+                      <h3 className="font-display text-lg font-semibold text-[#f1f2e9] transition-colors group-hover:text-[#d8e9ac]">
+                        {dish.name[lang]}
+                      </h3>
+
+                      <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[#c6c8b9]/75">
+                        {dish.description[lang]}
+                      </p>
+
+                      <div className="mt-4 flex items-start gap-2 border-t border-white/[0.07] pt-3 text-[11px] leading-relaxed text-[#c6c8b9]/80">
+                        <Wine className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#d8e9ac]" />
+                        <span>{dish.signature!.pairing[lang]}</span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* CARTA COMPLETA */}
+          <section
+            id="carta"
+            className="scroll-mt-24 px-4 pb-20 pt-12 sm:px-6 md:px-8"
+          >
+            <div className="mb-8 border-b border-[#45483d]/50 pb-5">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-[#d8e9ac] sm:text-xs">
+                {lang === "it" ? "Menu stagionale" : "Seasonal Menu"}
+              </p>
+
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <h2 className="font-display text-2xl font-semibold tracking-wide text-[#f1f2e9] sm:text-3xl">
+                  {t("fullMenu")}
+                </h2>
+
+                <span className="text-[10px] uppercase tracking-[0.15em] text-[#c6c8b9]/55">
+                  {lang === "it" ? "La carta completa" : "The complete menu"}
+                </span>
+              </div>
+            </div>
+
+            {/* SELEZIONE MENU */}
+            {menus.length > 1 && (
+              <div className="mb-8 rounded-xl border border-[#45483d]/50 bg-[#111e1e] p-4 sm:p-5">
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#c6c8b9]/75">
+                  {lang === "it" ? "Seleziona il menu" : "Choose a menu"}
+                </p>
+
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="group"
+                  aria-label={lang === "it" ? "Seleziona menu" : "Select menu"}
+                >
+                  {menus.map((menu) => {
+                    const isSelected = selectedMenu?.id === menu.id;
+                    const menuName =
+                      (lang === "it" ? menu.name_it : menu.name_en) ||
+                      menu.name_it ||
+                      menu.name_en;
+
+                    return (
+                      <button
+                        key={menu.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedMenuId(menu.id);
+                          setDiets([]);
+                          pickCat("all");
+                        }}
+                        aria-pressed={isSelected}
+                        className={cn(
+                          "min-h-10 rounded-full border px-5 py-2.5 text-xs font-semibold transition-all",
+                          isSelected
+                            ? "border-[#d8e9ac] bg-[#d8e9ac] text-[#081616] shadow-[0_0_16px_rgba(216,233,172,0.12)]"
+                            : "border-[#45483d]/70 bg-[#111e1e] text-[#c6c8b9] hover:border-[#d8e9ac]/50 hover:text-[#d8e9ac]",
+                        )}
+                      >
+                        {menuName}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedMenu && (
+                  <p className="mt-3 text-xs leading-relaxed text-[#c6c8b9]/70">
+                    {lang === "it"
+                      ? selectedMenu.description_it
+                      : selectedMenu.description_en}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* FILTRI CATEGORIA */}
+            <nav
+              className="no-scrollbar sticky top-20 z-30 -mx-4 mb-7 flex snap-x gap-2 overflow-x-auto border-b border-[#45483d]/40 bg-[#081616]/95 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 md:-mx-8 md:px-8"
+              aria-label={lang === "it" ? "Categorie del menu" : "Menu categories"}
+            >
+              {[{ id: "all" as const, label: ui.all }, ...categories].map(
+                (category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => pickCat(category.id)}
+                    aria-pressed={cat === category.id}
+                    className={cn(
+                      "min-h-10 shrink-0 snap-start rounded-full border px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.1em] transition-all sm:px-5",
+                      cat === category.id
+                        ? "border-[#d8e9ac] bg-[#d8e9ac] text-[#081616]"
+                        : "border-[#45483d]/70 bg-[#111e1e] text-[#c6c8b9]/80 hover:border-[#d8e9ac]/50 hover:text-[#d8e9ac]",
+                    )}
+                  >
+                    {category.label[lang]}
+                  </button>
+                ),
+              )}
+            </nav>
+
+            {/* FILTRI ALIMENTARI */}
+            <div
+              className="mb-9 flex flex-wrap items-center gap-2"
+              role="group"
+              aria-label={dietUi.title[lang]}
+            >
+              {(Object.keys(dietLabels) as DietId[]).map((key) => {
+                const Icon = dietIcons[key];
+                const isActive = diets.includes(key);
+
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleDiet(key)}
+                    aria-pressed={isActive}
+                    className={cn(
+                      "inline-flex min-h-9 items-center gap-2 rounded-full border px-3.5 py-2 text-[10px] font-medium transition-all",
+                      isActive
+                        ? "border-[#d8e9ac]/70 bg-[#d8e9ac]/10 text-[#d8e9ac]"
+                        : "border-[#45483d]/60 bg-[#111e1e] text-[#c6c8b9]/75 hover:border-[#d8e9ac]/40 hover:text-[#d8e9ac]",
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {dietLabels[key][lang]}
+                  </button>
+                );
+              })}
+
+              <span className="ml-auto self-center text-[10px] tabular-nums text-[#c6c8b9]/55">
+                {dietUi.count[lang](visibleCount)}
+              </span>
+            </div>
+
+            {/* ELENCO PIATTI */}
+            {visibleCount === 0 && (
+              <div className="rounded-xl border border-[#45483d]/40 bg-[#111e1e] px-5 py-12 text-center">
+                <Leaf className="mx-auto mb-3 h-6 w-6 text-[#d8e9ac]/60" />
+                <p className="text-sm text-[#c6c8b9]/75">
+                  {dietUi.empty[lang]}
+                </p>
+              </div>
+            )}
+
+            <div ref={menuRef} className="scroll-mt-40 space-y-12">
+              {visibleCats.map((category) => {
+                const list = dishes.filter(
+                  (dish) => dish.category === category.id,
+                );
+
+                if (!list.length) return null;
+
+                return (
+                  <section key={category.id}>
+                    <div className="mb-5 flex items-center gap-4">
+                      <h3 className="shrink-0 font-display text-xl font-medium italic text-[#f1f2e9] sm:text-2xl">
+                        {category.label[lang]}
+                      </h3>
+                      <span className="h-px flex-1 bg-[#45483d]/50" />
+                      <span className="text-[10px] tabular-nums text-[#c6c8b9]/50">
+                        {list.length.toString().padStart(2, "0")}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                      {list.map((dish) => (
+                        <Link
+                          key={dish.id}
+                          to="/piatto/$id"
+                          params={{ id: dish.id }}
+                          className="group flex min-w-0 gap-4 overflow-hidden rounded-xl border border-[#45483d]/45 bg-[#111e1e] p-3.5 text-left transition-all duration-300 hover:border-[#d8e9ac]/45 hover:bg-[#152222] active:scale-[0.99] sm:gap-5 sm:p-4"
+                        >
+                          <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-lg bg-[#081616] sm:h-32 sm:w-32">
+                            {dish.image ? (
+                              <img
+                                src={dish.image}
+                                alt={dish.name[lang]}
+                                loading="lazy"
+                                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[#d8e9ac]/45">
+                                {category.id === "bevande" ? (
+                                  <Wine className="h-8 w-8" />
+                                ) : (
+                                  <UtensilsCrossed className="h-8 w-8" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex min-w-0 flex-1 flex-col py-0.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <h4 className="font-display text-base font-semibold leading-snug text-[#f1f2e9] transition-colors group-hover:text-[#d8e9ac] sm:text-lg">
+                                {dish.name[lang]}
+                              </h4>
+
+                              <span className="shrink-0 pt-0.5 font-display text-base font-semibold tabular-nums text-[#d8e9ac] sm:text-lg">
+                                {formatPrice(dish.price, lang)}
+                              </span>
+                            </div>
+
+                            {dish.tag[lang] && (
+                              <span className="mt-2 w-fit rounded-full border border-[#d8e9ac]/30 bg-[#d8e9ac]/[0.06] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#d8e9ac]">
+                                {dish.tag[lang]}
+                              </span>
+                            )}
+
+                            <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[#c6c8b9]/70">
+                              {dish.description[lang]}
+                            </p>
+
+                            <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-3">
+                              {dish.diets.length > 0 ? (
+                                <DietBadges list={dish.diets} />
+                              ) : (
+                                <span />
+                              )}
+
+                              <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#d8e9ac]/75 transition-colors group-hover:text-[#d8e9ac]">
+                                {lang === "it" ? "Dettagli" : "Details"}
+                                <ArrowRight className="h-3 w-3" />
+                              </span>
+                            </div>
+
+                            <div className="mt-2">
+                              <AllergenChips list={dish.allergens} />
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          </section>
+        </main>
+
+        {/* FOOTER */}
+        <footer className="border-t border-[#45483d]/50 bg-[#041010]">
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-9 px-6 py-12 sm:grid-cols-2 md:grid-cols-3 md:px-8">
+            <div>
+              <div className="mb-4">
+                <ClockMark />
+              </div>
+
+              <h3 className="font-display text-xl font-semibold text-[#f1f2e9]">
+                L'Horloge
+              </h3>
+
+              <p className="mt-3 max-w-xs text-xs leading-relaxed text-[#c6c8b9]/65">
+                {t("footer")}
+              </p>
+            </div>
+
+            <div className="space-y-3 text-xs text-[#c6c8b9]/75">
+              <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d8e9ac]">
+                {lang === "it" ? "Dove siamo" : "Find us"}
+              </p>
+
+              <p className="flex items-start gap-2.5">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#d8e9ac]" />
+                <span>{t("address")}</span>
+              </p>
+            </div>
+
+            <div className="space-y-3 text-xs text-[#c6c8b9]/75">
+              <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d8e9ac]">
+                {lang === "it" ? "Orari" : "Opening hours"}
+              </p>
+
+              <p className="flex items-start gap-2.5">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[#d8e9ac]" />
+                <span>{t("hours")}</span>
+              </p>
+            </div>
           </div>
-        </section>
-      </main>
 
-      <footer className="border-t border-border/30">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-6 py-10 text-center text-xs text-muted-foreground">
-          <ClockMark />
+          <div className="border-t border-[#45483d]/35 px-6 py-5 text-center">
+            <p className="text-[10px] text-[#c6c8b9]/40">
+              © {new Date().getFullYear()} L'Horloge Ristorante.{" "}
+              {lang === "it" ? "Tutti i diritti riservati." : "All rights reserved."}
+            </p>
 
-          <p className="flex items-center gap-2">
-            <MapPin className="h-3.5 w-3.5 text-sage" />
-            {t("address")}
-          </p>
-
-          <p className="flex items-center gap-2">
-            <Clock className="h-3.5 w-3.5 text-sage" />
-            {t("hours")}
-          </p>
-
-          <p className="max-w-md opacity-80">{t("footer")}</p>
-
-          <Link to="/admin" className="mt-2 opacity-50 hover:opacity-100">
-            Admin
-          </Link>
-        </div>
-      </footer>
+            <Link
+              to="/admin"
+              className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#45483d]/60 bg-[#111e1e] px-4 py-2 text-[10px] font-medium uppercase tracking-wider text-[#c6c8b9]/60 transition-colors hover:border-[#d8e9ac]/50 hover:text-[#d8e9ac]"
+            >
+              {lang === "it" ? "Area riservata" : "Admin area"}
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
