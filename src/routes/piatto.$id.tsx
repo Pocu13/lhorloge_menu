@@ -1,4 +1,3 @@
-
 import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
@@ -7,6 +6,8 @@ import {
   Sprout,
   WheatOff,
   Quote,
+  Utensils,
+  Wine,
 } from "lucide-react";
 
 import {
@@ -52,11 +53,12 @@ export const Route = createFileRoute("/piatto/$id")({
   }),
 
   notFoundComponent: () => (
-    <div className="flex min-h-screen items-center justify-center bg-[#081616] px-6 text-center">
+    <div className="flex min-h-screen items-center justify-center bg-[#081616] px-6 text-center text-[#D7E5E5]">
       <div>
         <p className="font-display text-2xl text-white">
           Piatto non trovato · Dish not found
         </p>
+
         <Link
           to="/"
           className="mt-6 inline-flex items-center gap-2 text-sm text-[#D8E9AC] underline"
@@ -103,229 +105,184 @@ function DishPage() {
   };
 
   const labels = {
+    detail: lang === "it" ? "Dettaglio Piatto" : "Dish Details",
     back: lang === "it" ? "Torna al menu" : "Back to menu",
-    vr: "3D/VR",
-    kitchenThought: lang === "it" ? "Pensiero di Cucina" : "Kitchen Notes",
+    kitchenThought:
+      lang === "it" ? "Pensiero di Cucina" : "Kitchen Notes",
     ingredients: lang === "it" ? "Ingredienti" : "Ingredients",
-    allergens: lang === "it" ? "Allergeni" : "Allergens",
+    allergens: lang === "it" ? "Allergeni & Intolleranze" : "Allergens & Intolerances",
     regulation: "REG. UE 1169/11",
-    cellar: lang === "it" ? "Dalla Cantina de L'Horloge" : "From L'Horloge Cellar",
-    recommendedWine: lang === "it" ? "Vino Consigliato" : "Recommended Wine",
-    noIngredients: lang === "it" ? "Ingredienti non disponibili." : "Ingredients not available.",
+    cellar:
+      lang === "it"
+        ? "Dalla Cantina de L'Horloge"
+        : "From L'Horloge Cellar",
+    recommendedWine:
+      lang === "it" ? "Vino Consigliato" : "Recommended Wine",
+    noIngredients:
+      lang === "it"
+        ? "Ingredienti non disponibili."
+        : "Ingredients not available.",
     noAllergens: allergenUi.none[lang],
+    allergensNote: allergenUi.note[lang],
   };
 
-  const wineName = d.sommelier?.wine[lang] || d.signature?.pairing[lang] || "";
+  const wineName =
+    d.sommelier?.wine[lang] || d.signature?.pairing[lang] || "";
+
   const wineNote = d.sommelier?.note[lang] || "";
 
   return (
     <div className="min-h-screen bg-[#081616] font-sans text-[#D7E5E5] antialiased">
 
-      <main className="relative flex min-h-screen w-full flex-col bg-[#081616] pb-10">
+      <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col overflow-hidden border-x border-[#2a3737]/60 bg-[#081616] shadow-2xl">
 
-        {/* FOTO A TUTTO SCHERMO CON PULSANTE INDIETRO */}
+        {/* HEADER */}
 
-        <section className="relative h-[75svh] min-h-[520px] max-h-[850px] w-full overflow-hidden bg-[#041010]">
+        <header className="sticky top-0 z-30 flex h-[60px] shrink-0 items-center justify-between border-b border-[#2a3737]/60 bg-[#081616]/95 px-3 backdrop-blur-xl">
 
-          {d.image && (
-            <img
-              src={d.image}
-              alt={d.name[lang]}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          )}
+          <div className="flex min-w-0 items-center gap-2">
 
-          <div className="absolute inset-0 bg-gradient-to-t from-[#081616] via-[#081616]/20 to-transparent" />
+            <button
+              type="button"
+              onClick={back}
+              aria-label={labels.back}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#D7E5E5] transition-colors hover:bg-[#152222] hover:text-[#D8E9AC]"
+            >
+              <ArrowLeft className="h-[22px] w-[22px]" />
+            </button>
 
-          <button
-            type="button"
-            onClick={back}
-            aria-label={labels.back}
-            className="absolute left-4 top-[calc(env(safe-area-inset-top)+16px)] z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#152222]/70 text-white shadow-lg backdrop-blur-md transition-colors hover:text-[#D8E9AC]"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="h-1 w-1 shrink-0 rounded-full bg-[#45483d]" />
 
-          <div className="absolute bottom-4 right-4 z-10 rounded-full border border-[#45483d] bg-[#152222]/80 px-3 py-1.5 text-xs font-medium tracking-wide text-[#D8E9AC] shadow-lg backdrop-blur-md">
-            {labels.vr}
-          </div>
-
-        </section>
-
-        {/* TITOLO E PREZZO */}
-
-        <section className="flex flex-col gap-3 px-4 pb-6 pt-4">
-
-          <div className="flex flex-col gap-1.5">
-
-            <span className="font-sans text-[11px] font-semibold uppercase tracking-widest text-[#D8E9AC]">
-              {category?.label[lang]}
-              {d.tag[lang] ? ` • ${d.tag[lang]}` : ""}
-            </span>
-
-            <h1 className="whitespace-normal font-display text-xl font-semibold leading-tight tracking-tight text-white sm:text-2xl">
-              {d.name[lang]}
-            </h1>
-
-            <div className="flex items-baseline gap-2 pt-0.5">
-              <span className="font-display text-2xl font-bold tracking-tight text-[#D8E9AC]">
-                {formatPrice(d.price, lang)}
-              </span>
+              <h1 className="truncate font-display text-base font-medium tracking-tight text-white">
+                {labels.detail}
+              </h1>
             </div>
 
           </div>
 
-        </section>
+          <div className="ml-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1f2c2c]">
+            <Utensils className="h-[17px] w-[17px] text-[#D8E9AC]" />
+          </div>
 
-        {/* CONTENUTO DEL PIATTO */}
+        </header>
 
-        <div className="flex flex-col gap-6 px-4 pb-6">
+        {/* CONTENUTO SCORREVOLE */}
+
+        <div className="flex-1 pb-12">
+
+          {/* IMMAGINE PRINCIPALE */}
+
+          <section className="relative w-full overflow-hidden bg-[#041010]">
+
+            <div className="relative aspect-[4/3] max-h-[380px] w-full">
+
+              {d.image ? (
+                <img
+                  src={d.image}
+                  alt={d.name[lang]}
+                  className="absolute inset-0 h-full w-full object-cover object-center"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-[#041010]">
+                  <Utensils className="h-16 w-16 text-[#D8E9AC]/40" />
+                </div>
+              )}
+
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#081616] via-transparent to-transparent opacity-60" />
+
+            </div>
+
+          </section>
+
+          {/* BADGE E CARATTERISTICHE */}
+
+          <section className="flex flex-wrap items-center gap-2 bg-[#111e1e] px-5 pb-3 pt-3.5">
+
+            {d.tag[lang] && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1f2c2c] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#D8E9AC] shadow-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#D8E9AC]" />
+                {d.tag[lang]}
+              </span>
+            )}
+
+            {diets.map((diet) => {
+              const Icon = dietIcons[diet];
+
+              return (
+                <span
+                  key={diet}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#152222] px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-[#D7E5E5]"
+                >
+                  <Icon className="h-[13px] w-[13px] text-[#D8E9AC]" />
+                  {dietLabels[diet][lang]}
+                </span>
+              );
+            })}
+
+          </section>
+
+          {/* TITOLO, CATEGORIA E PREZZO */}
+
+          <section className="flex flex-col gap-3 px-5 pb-3 pt-4">
+
+            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.15em] text-[#D8E9AC]">
+              {category?.label[lang]}
+            </p>
+
+            <div className="flex items-start justify-between gap-4">
+
+              <div className="min-w-0 flex-1">
+
+                <h2 className="font-display text-3xl font-medium leading-tight tracking-tight text-white">
+                  {d.name[lang]}
+                </h2>
+
+              </div>
+
+              <div className="shrink-0 pt-1 text-right">
+                <span className="block whitespace-nowrap font-display text-2xl font-bold text-[#D8E9AC]">
+                  {formatPrice(d.price, lang)}
+                </span>
+              </div>
+
+            </div>
+
+          </section>
 
           {/* RACCONTO DEL PIATTO */}
 
-          <section className="flex flex-col gap-4 rounded-xl bg-[#111e1e] p-5 shadow-sm">
+          {d.description[lang] && (
+            <section className="px-5 pb-2 pt-3">
 
-            <p className="font-sans text-sm leading-relaxed text-[#C6C8B9]">
-              {d.description[lang]}
-            </p>
+              <div className="mt-1 flex flex-col gap-4 rounded-2xl border border-[#2a3737]/60 bg-[#041010]/80 p-5 shadow-sm sm:p-6">
 
-            {d.signature?.note[lang] && (
-              <div className="flex flex-col gap-2 rounded-lg bg-[#152222] p-4 shadow-inner">
+                <p className="font-display text-sm font-normal leading-relaxed text-[#D7E5E5] sm:text-base">
+                  {d.description[lang]}
+                </p>
 
-                <div className="flex items-center gap-2">
-                  <Quote className="h-5 w-5 text-[#D8E9AC]" />
-                  <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#D8E9AC]">
-                    {labels.kitchenThought}
-                  </span>
-                </div>
+                {d.signature?.note[lang] && (
+                  <div className="relative rounded-xl border border-[#2a3737]/50 bg-[#111e1e]/90 p-4">
 
-                <blockquote className="font-display text-sm italic leading-relaxed text-[#D7E5E5]">
-                  {d.signature.note[lang]}
-                </blockquote>
+                    <div className="flex items-start gap-3">
 
-              </div>
-            )}
+                      <Quote className="mt-0.5 h-6 w-6 shrink-0 text-[#D8E9AC]" />
 
-          </section>
+                      <div className="min-w-0 flex-1">
 
-          {/* INGREDIENTI */}
+                        <p className="font-display text-sm italic leading-relaxed text-[#D7E5E5]">
+                          {d.signature.note[lang]}
+                        </p>
 
-          <section className="flex flex-col gap-3 rounded-xl bg-[#111e1e] p-5 shadow-sm">
+                        <p className="mt-3 border-t border-[#2a3737]/60 pt-2.5 text-[10px] font-semibold uppercase tracking-widest text-[#D8E9AC]">
+                          {labels.kitchenThought}
+                        </p>
 
-            <h2 className="font-display text-lg font-medium text-white">
-              {labels.ingredients}
-            </h2>
+                      </div>
 
-            {ingredients.length > 0 ? (
-              <ul className="flex flex-col gap-2 pt-1 font-sans text-xs text-[#C6C8B9]">
-                {ingredients.map((ingredient, index) => (
-                  <li
-                    key={`${ingredient}-${index}`}
-                    className="flex items-center gap-2 rounded-lg bg-[#152222] p-2.5 text-[#D7E5E5]"
-                  >
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#D8E9AC]" />
-                    <span>{ingredient}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-xs text-[#C6C8B9]">{labels.noIngredients}</p>
-            )}
-
-          </section>
-
-          {/* ALLERGENI */}
-
-          <section className="flex flex-col gap-3 rounded-xl bg-[#111e1e] p-5 shadow-sm">
-
-            <div className="flex items-center justify-between gap-2">
-
-              <h2 className="font-display text-lg font-medium text-white">
-                {labels.allergens}
-              </h2>
-
-              <span className="whitespace-nowrap rounded-full bg-[#1f2c2c] px-2 py-0.5 font-sans text-[10px] font-semibold tracking-[0.08em] text-[#C6C8B9]">
-                {labels.regulation}
-              </span>
-
-            </div>
-
-            <p className="font-sans text-xs leading-tight text-[#909285]">
-              {allergenUi.note[lang]}
-            </p>
-
-            {allergens.length > 0 ? (
-              <div className="flex flex-col gap-2 pt-1">
-
-                {allergens.map((allergen) => (
-                  <div
-                    key={allergen}
-                    className="flex items-start gap-3 rounded-lg bg-[#152222] p-3"
-                  >
-                    <div className="flex-1">
-                      <span className="font-sans text-xs font-semibold text-[#D7E5E5]">
-                        {allergenLabels[allergen as AllergenId]?.[lang] ?? allergen}
-                      </span>
                     </div>
+
                   </div>
-                ))}
-
-              </div>
-            ) : (
-              <p className="py-2 text-xs text-[#C6C8B9]">
-                {labels.noAllergens}
-              </p>
-            )}
-
-            {/* CARATTERISTICHE ALIMENTARI */}
-
-            {diets.length > 0 && (
-              <div className="flex flex-wrap items-center justify-around gap-3 pt-1 text-center">
-
-                {diets.map((diet) => {
-                  const Icon = dietIcons[diet];
-
-                  return (
-                    <div
-                      key={diet}
-                      className="flex items-center gap-1.5 font-sans text-xs text-[#D8E9AC]"
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span>{dietLabels[diet][lang]}</span>
-                    </div>
-                  );
-                })}
-
-              </div>
-            )}
-
-          </section>
-
-          {/* CANTINA */}
-
-          {wineName && (
-            <section className="flex flex-col gap-3 rounded-xl bg-[#111e1e] p-5 shadow-sm">
-
-              <h2 className="font-display text-lg font-medium text-white">
-                {labels.cellar}
-              </h2>
-
-              <div className="flex flex-col gap-3 rounded-lg bg-[#152222] p-3.5">
-
-                <div className="flex flex-col">
-                  <span className="font-sans text-xs uppercase tracking-wider text-[#C6C8B9]">
-                    {labels.recommendedWine}
-                  </span>
-
-                  <h3 className="mt-1 font-display text-base font-semibold text-[#D7E5E5]">
-                    {wineName}
-                  </h3>
-                </div>
-
-                {wineNote && (
-                  <p className="font-sans text-xs leading-relaxed text-[#C6C8B9]">
-                    {wineNote}
-                  </p>
                 )}
 
               </div>
@@ -333,11 +290,149 @@ function DishPage() {
             </section>
           )}
 
-          <div className="flex flex-col items-center justify-center gap-1 py-2 text-center">
-            <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-[#909285]">
+          {/* INGREDIENTI */}
+
+          <section className="px-5 py-3">
+
+            <div className="rounded-2xl border border-[#2a3737]/60 bg-[#152222] p-5 shadow-sm">
+
+              <div className="mb-2 flex items-center justify-between border-b border-[#2a3737]/60 pb-3.5">
+
+                <h3 className="font-display text-lg font-medium tracking-tight text-white">
+                  {labels.ingredients}
+                </h3>
+
+              </div>
+
+              {ingredients.length > 0 ? (
+                <ul className="divide-y divide-[#2a3737]/40">
+
+                  {ingredients.map((ingredient, index) => (
+                    <li
+                      key={`${ingredient}-${index}`}
+                      className="flex items-baseline gap-2 py-3"
+                    >
+
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D8E9AC]" />
+
+                      <span className="font-sans text-sm font-medium text-[#D7E5E5]">
+                        {ingredient}
+                      </span>
+
+                    </li>
+                  ))}
+
+                </ul>
+              ) : (
+                <p className="py-3 text-sm text-[#C6C8B9]">
+                  {labels.noIngredients}
+                </p>
+              )}
+
+            </div>
+
+          </section>
+
+          {/* ALLERGENI */}
+
+          <section className="px-5 py-3">
+
+            <div className="rounded-2xl border border-[#2a3737]/60 bg-[#152222] p-5 shadow-sm">
+
+              <div className="mb-2 flex items-center justify-between gap-3 border-b border-[#2a3737]/60 pb-3.5">
+
+                <h3 className="font-display text-lg font-medium tracking-tight text-white">
+                  {labels.allergens}
+                </h3>
+
+                <span className="shrink-0 text-[10px] font-medium uppercase tracking-wider text-[#C6C8B9]">
+                  {labels.regulation}
+                </span>
+
+              </div>
+
+              <p className="mb-2 font-sans text-xs leading-relaxed text-[#909285]">
+                {labels.allergensNote}
+              </p>
+
+              {allergens.length > 0 ? (
+                <ul className="divide-y divide-[#2a3737]/40">
+
+                  {allergens.map((allergen) => (
+                    <li
+                      key={allergen}
+                      className="flex items-baseline gap-2 py-3"
+                    >
+
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D8E9AC]" />
+
+                      <span className="font-sans text-sm font-medium text-[#D7E5E5]">
+                        {allergenLabels[allergen as AllergenId]?.[lang] ?? allergen}
+                      </span>
+
+                    </li>
+                  ))}
+
+                </ul>
+              ) : (
+                <p className="py-3 text-sm text-[#C6C8B9]">
+                  {labels.noAllergens}
+                </p>
+              )}
+
+            </div>
+
+          </section>
+
+          {/* VINO CONSIGLIATO */}
+
+          {wineName && (
+            <section className="px-5 py-3">
+
+              <div className="rounded-2xl border border-[#2a3737]/60 bg-[#152222] p-5 shadow-sm">
+
+                <div className="mb-3.5 flex items-center gap-2 border-b border-[#2a3737]/60 pb-3.5">
+
+                  <Wine className="h-5 w-5 text-[#D8E9AC]" />
+
+                  <h3 className="font-display text-lg font-medium tracking-tight text-white">
+                    {labels.cellar}
+                  </h3>
+
+                </div>
+
+                <div className="rounded-xl border border-[#2a3737]/40 bg-[#111e1e] p-4">
+
+                  <p className="font-sans text-[10px] font-semibold uppercase tracking-widest text-[#D8E9AC]">
+                    {labels.recommendedWine}
+                  </p>
+
+                  <h4 className="mt-1 font-display text-base font-semibold text-white">
+                    {wineName}
+                  </h4>
+
+                  {wineNote && (
+                    <p className="mt-3 font-sans text-sm leading-relaxed text-[#C6C8B9]">
+                      {wineNote}
+                    </p>
+                  )}
+
+                </div>
+
+              </div>
+
+            </section>
+          )}
+
+          {/* FIRMA */}
+
+          <footer className="flex flex-col items-center justify-center gap-1 px-5 pb-5 pt-6 text-center">
+
+            <span className="font-sans text-[10px] font-medium uppercase tracking-[0.25em] text-[#909285]">
               L'HORLOGE
             </span>
-          </div>
+
+          </footer>
 
         </div>
       </main>
