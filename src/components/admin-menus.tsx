@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, FileUp, Pencil, Plus, Trash2, UtensilsCrossed, X } from "lucide-react";
+import { FileUp, Pencil, Plus, Search, Trash2, UtensilsCrossed, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { allDishesQuery, type DishRow } from "@/lib/menu-api";
@@ -114,6 +114,7 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
   const [descriptionIt, setDescriptionIt] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [selectedDishIds, setSelectedDishIds] = useState<string[]>([]);
+  const [dishSearch, setDishSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -130,6 +131,7 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
     setDescriptionIt("");
     setIsActive(true);
     setSelectedDishIds([]);
+    setDishSearch("");
     setShowForm(false);
   };
 
@@ -175,6 +177,15 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
       qc.invalidateQueries({ queryKey: ["menu-dishes"] }),
     ]);
   };
+
+  const filteredDishes = dishes.filter((dish) => {
+    const search = dishSearch.trim().toLocaleLowerCase("it-IT");
+    if (!search) return true;
+    return (
+      dish.name_it.toLocaleLowerCase("it-IT").includes(search) ||
+      String(dish.category).toLocaleLowerCase("it-IT").includes(search)
+    );
+  });
 
   const toggleDishSelection = (dishId: string) => {
     setSelectedDishIds((current) =>
@@ -703,40 +714,9 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.06] bg-[#1F2C2C] p-3.5">
-                <div className="flex min-w-0 flex-col">
-                  <span className="text-xs font-semibold text-white">
-                    Visibile nel Menù Ospiti (QR)
-                  </span>
-                  <span className="mt-1 text-[11px] text-[#B5CBC9]">
-                    I clienti possono consultarlo con il QR
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={isActive}
-                  aria-label="Visibilità del menù nel QR"
-                  onClick={() => setIsActive((current) => !current)}
-                  disabled={busy}
-                  className={cn(
-                    "relative h-5 w-9 shrink-0 rounded-full transition",
-                    isActive ? "bg-[#D8E9AC]" : "bg-[#45483D]",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "absolute top-0.5 h-4 w-4 rounded-full bg-[#081616] transition-all",
-                      isActive ? "left-[18px]" : "left-0.5",
-                    )}
-                  />
-                </button>
-              </div>
-
               <div className="flex flex-col gap-2.5 pt-1">
                 <div className="flex items-center justify-between gap-2">
-                  <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#D7E5E5]">
-                    <Check className="h-4 w-4 text-[#D8E9AC]" />
+                  <label className="text-xs font-semibold uppercase tracking-wider text-[#D7E5E5]">
                     {editingId
                       ? "Piatti Associati al Menù"
                       : "Associa Piatti Disponibili"}
@@ -744,6 +724,19 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
                   <span className="shrink-0 rounded-full bg-[#D8E9AC] px-2.5 py-1 text-[11px] font-semibold text-[#151F00]">
                     {selectedDishIds.length} {selectedDishIds.length === 1 ? "piatto selezionato" : "piatti selezionati"}
                   </span>
+                </div>
+
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#B5CBC9]/70" />
+                  <input
+                    type="search"
+                    value={dishSearch}
+                    onChange={(event) => setDishSearch(event.target.value)}
+                    disabled={busy || dishesLoading || !!dishesError}
+                    placeholder="Cerca un piatto o una categoria..."
+                    aria-label="Cerca piatti per nome o categoria"
+                    className={cn(input, "pl-10")}
+                  />
                 </div>
 
                 <div className="flex max-h-56 flex-col gap-2 overflow-y-auto rounded-2xl border border-white/[0.06] bg-[#111E1E] p-3">
@@ -755,12 +748,12 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
                     <p className="py-5 text-center text-xs text-[#FFB4AB]">
                       Non è stato possibile caricare i piatti. Chiudi e riprova.
                     </p>
-                  ) : dishes.length === 0 ? (
+                  ) : filteredDishes.length === 0 ? (
                     <p className="py-5 text-center text-xs text-[#B5CBC9]">
-                      Non ci sono piatti da associare.
+                      {dishSearch.trim() ? "Nessun piatto trovato." : "Non ci sono piatti da associare."}
                     </p>
                   ) : (
-                    dishes.map((dish) => {
+                    filteredDishes.map((dish) => {
                       const checked = selectedDishIds.includes(dish.id);
 
                       return (
