@@ -603,7 +603,7 @@ function Editor() {
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="min-h-[46px] w-full rounded-xl border border-white/[0.07] bg-[#152222] pl-11 pr-10 text-sm text-white outline-none transition placeholder:text-[#B5CBC9]/60 focus:border-[#D8E9AC]"
+                  className="min-h-[46px] w-full rounded-xl border border-white/[0.07] bg-[#152222] pl-11 pr-10 text-base text-white outline-none transition placeholder:text-[#B5CBC9]/60 focus:border-[#D8E9AC]"
                   placeholder="Cerca piatto, ingrediente..."
                   aria-label="Cerca piatto o ingrediente"
                 />
