@@ -14,6 +14,8 @@ import {
   AlertTriangle,
   Image as ImageIcon,
   Sparkles,
+  Box,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -93,6 +95,7 @@ export function DishEditor({
   const [r, setR] = useState<DishRow>(initial);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [modelUploading, setModelUploading] = useState(false);
 
   const [ingredientModal, setIngredientModal] = useState(false);
   const [allergenModal, setAllergenModal] = useState(false);
@@ -111,12 +114,8 @@ export function DishEditor({
     (initial.allergens ?? []) as AllergenId[],
   );
 
-  // Questi due interruttori sono solamente grafici:
-  // non vengono salvati perché al momento non esistono campi DB dedicati.
-  const [qrEnabled, setQrEnabled] = useState(true);
-  const [stockEnabled, setStockEnabled] = useState(false);
-
   const photoInput = useRef<HTMLInputElement>(null);
+  const modelInput = useRef<HTMLInputElement>(null);
 
   const set = <K extends keyof DishRow>(key: K, value: DishRow[K]) => {
     setR((current) => ({ ...current, [key]: value }));
@@ -133,8 +132,34 @@ export function DishEditor({
     );
   };
 
-  const toggleQr = () => setQrEnabled((current) => !current);
-  const toggleStock = () => setStockEnabled((current) => !current);
+  const uploadModel = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".glb")) {
+      toast.error("Seleziona un modello 3D in formato .glb.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Il modello 3D non può superare 50 MB.");
+      event.target.value = "";
+      return;
+    }
+    setModelUploading(true);
+    const path = `${crypto.randomUUID()}.glb`;
+    const { error } = await supabase.storage.from("dish-models").upload(path, file, {
+      contentType: "model/gltf-binary",
+      upsert: false,
+    });
+    setModelUploading(false);
+    event.target.value = "";
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setR((current) => ({ ...current, model_3d_glb: path }));
+    toast.success("Modello 3D caricato. Salva il piatto per confermare.");
+  };
 
   const uploadPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -226,7 +251,10 @@ export function DishEditor({
       toast.error("Inserisci il nome del piatto.");
       return;
     }
-
+    if (r.model_3d_enabled && !r.model_3d_glb) {
+      toast.error("Carica prima un modello 3D .glb per poterlo attivare.");
+      return;
+    }
     setBusy(true);
 
     const payload = {
@@ -364,8 +392,7 @@ export function DishEditor({
             </p>
           )}
         </section>
-
-        {/* INFORMAZIONI PRINCIPALI */}
+                {/* INFORMAZIONI PRINCIPALI */}
         <section className={`${card} space-y-4`}>
           <h2 className="font-display text-base font-semibold text-white">
             Informazioni Principali
@@ -576,8 +603,7 @@ export function DishEditor({
             </label>
           </div>
         </section>
-
-        {/* BADGE E VISIBILITÀ */}
+                {/* BADGE E VISIBILITÀ */}
         <section className={`${card} space-y-4`}>
           <h2 className="font-display text-base font-semibold text-white">
             Badge &amp; Visibilità
@@ -607,49 +633,42 @@ export function DishEditor({
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3 rounded-lg bg-[#152222] p-3">
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-white">
-                  Piatto Attivo nel Menu
-                </p>
-                <p className="mt-1 text-[10px] leading-relaxed text-[#999999]">
-                  Visibile ai clienti nel menu digitale
-                </p>
+                <p className="text-xs font-semibold text-white">Piatto Attivo nel Menu</p>
+                <p className="mt-1 text-[10px] leading-relaxed text-[#999999]">Visibile ai clienti nel menu digitale</p>
               </div>
-              <Toggle
-                checked={Boolean(r.visible)}
-                onChange={() => set("visible", !r.visible)}
-              />
+              <Toggle checked={Boolean(r.visible)} onChange={() => set("visible", !r.visible)} />
             </div>
-
-            <div className="flex items-center justify-between gap-3 rounded-lg bg-[#152222] p-3">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-white">
-                  Abilita Ordine da Smartphone / QR
-                </p>
-                <p className="mt-1 text-[10px] leading-relaxed text-[#999999]">
-                  Consente l'ordine tramite QR Code
-                </p>
+            <div className="space-y-3 rounded-lg bg-[#152222] p-3">
+              <div className="flex items-center gap-2">
+                <Box size={17} className="shrink-0 text-[#D8E9AC]" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-white">Modello 3D / Realtà Aumentata</p>
+                  <p className="mt-1 text-[10px] leading-relaxed text-[#999999]">Carica il modello del piatto in formato GLB (massimo 50 MB).</p>
+                </div>
               </div>
-              <Toggle checked={qrEnabled} onChange={toggleQr} />
-            </div>
-
-            <div className="flex items-center justify-between gap-3 rounded-lg bg-[#152222] p-3">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-white">
-                  Piatto in Esaurimento / Stock Limitato
-                </p>
-                <p className="mt-1 text-[10px] leading-relaxed text-[#999999]">
-                  Segnala ai clienti la disponibilità limitata
-                </p>
+              <input ref={modelInput} type="file" accept=".glb,model/gltf-binary" className="hidden" onChange={uploadModel} />
+              <button type="button" onClick={() => modelInput.current?.click()} disabled={modelUploading}
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#D8E9AC]/25 bg-[#20302F] px-3 py-2 text-xs font-semibold text-[#D8E9AC] transition hover:bg-[#2A3D3B] disabled:opacity-50">
+                <Upload size={16} />
+                {modelUploading ? "Caricamento modello…" : r.model_3d_glb ? "Sostituisci modello GLB" : "Carica modello GLB"}
+              </button>
+              {r.model_3d_glb && <p className="break-all text-[10px] leading-relaxed text-[#B5CBC9]">Modello caricato: {r.model_3d_glb.split("/").pop()}</p>}
+              <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-white">Attiva badge 3D / AR</p>
+                  <p className="mt-1 text-[10px] leading-relaxed text-[#999999]">Mostra il badge nella scheda del piatto quando il modello è disponibile.</p>
+                </div>
+                <Toggle checked={Boolean(r.model_3d_enabled)} onChange={() => {
+                  if (!r.model_3d_enabled && !r.model_3d_glb) {
+                    toast.info("Carica prima il modello GLB.");
+                    return;
+                  }
+                  set("model_3d_enabled", !r.model_3d_enabled);
+                }} />
               </div>
-              <Toggle checked={stockEnabled} onChange={toggleStock} />
             </div>
           </div>
-
-          <p className="text-[10px] leading-relaxed text-[#89918E]">
-            Gli interruttori QR e disponibilità sono temporanei: non vengono
-            ancora salvati nel database. La visibilità del piatto, invece,
-            viene salvata regolarmente.
-          </p>
+          <p className="text-[10px] leading-relaxed text-[#89918E]">Il modello viene conservato nel bucket Supabase. Le modifiche diventano effettive dopo aver salvato il piatto.</p>
         </section>
 
         {/* ZONA RISCHIO */}
@@ -698,7 +717,7 @@ export function DishEditor({
 
           <button
             type="submit"
-            disabled={busy || uploading}
+            disabled={busy || uploading || modelUploading}
             className={buttonPrimary}
           >
             <Check size={16} />
@@ -706,8 +725,7 @@ export function DishEditor({
           </button>
         </div>
       </form>
-
-      {/* MODALE AGGIUNGI INGREDIENTE */}
+            {/* MODALE AGGIUNGI INGREDIENTE */}
       {ingredientModal && (
         <div className="fixed inset-0 z-[80] flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#081616]">
           <header className="z-10 shrink-0 border-b border-white/10 bg-[#111E1E] pt-[env(safe-area-inset-top)]">
