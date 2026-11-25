@@ -31,7 +31,7 @@ const MENU_TIMES = [
 ] as const;
 
 const input =
-  "w-full min-h-[46px] rounded-xl border border-white/[0.07] bg-[#1F2C2C] px-3.5 text-base font-medium text-[#D7E5E5] placeholder:text-[#B5CBC9]/60 outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
+  "box-border h-[46px] min-h-[46px] w-full rounded-xl border border-white/[0.07] bg-[#1F2C2C] px-3.5 text-base font-medium leading-normal text-[#D7E5E5] placeholder:text-[#B5CBC9]/60 outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
 
 const primaryButton =
   "inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full bg-[#D8E9AC] px-5 text-xs font-bold tracking-wide text-[#151F00] shadow-[0_4px_20px_rgba(216,233,172,0.18)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
@@ -636,7 +636,7 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
                 />
               </div>
 
-              {/* Tipologia e fascia oraria affiancate e della stessa dimensione */}
+              {/* Tipologia e fascia oraria affiancate e della stessa altezza */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex min-w-0 flex-col gap-1.5">
                   <label
