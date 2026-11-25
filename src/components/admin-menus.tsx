@@ -36,9 +36,6 @@ const input =
 const primaryButton =
   "inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full bg-[#D8E9AC] px-5 text-xs font-bold tracking-wide text-[#151F00] shadow-[0_4px_20px_rgba(216,233,172,0.18)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
 
-const secondaryButton =
-  "inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-[#1F2C2C] px-5 text-xs font-semibold text-[#D7E5E5] transition hover:bg-[#2A3737] active:scale-95 disabled:opacity-50";
-
 const makeSlug = (value: string) =>
   value
     .toLowerCase()
@@ -591,7 +588,8 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
             className="mx-auto flex h-full w-full max-w-lg flex-col overflow-hidden bg-[#081616]"
             aria-label={editingId ? "Modifica menù" : "Nuovo menù"}
           >
-            <header className="sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#111E1E] px-4 py-4">
+            {/* TOP BAR */}
+            <header className="sticky top-0 z-20 grid shrink-0 grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3 border-b border-white/[0.07] bg-[#111E1E] px-4 py-3">
               <button
                 type="button"
                 onClick={resetForm}
@@ -601,21 +599,24 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
               >
                 <X className="h-5 w-5" />
               </button>
-              <div className="flex min-w-0 flex-1 flex-col pr-10 text-center">
-                <h2
-                  id="admin-menu-modal-title"
-                  className="font-display text-lg font-semibold leading-tight text-white"
-                >
-                  {editingId ? "Modifica Menù" : "Nuovo Menù"}
-                </h2>
-                <p className="text-[11px] text-[#B5CBC9]">
-                  {editingId
-                    ? "Aggiorna impostazioni e piatti"
-                    : "Componi la carta o percorso gastronomico"}
-                </p>
-              </div>
+
+              <h2
+                id="admin-menu-modal-title"
+                className="min-w-0 text-center font-display text-lg font-semibold leading-tight text-white"
+              >
+                {editingId ? "Modifica Menù" : "Nuovo Menù"}
+              </h2>
+
+              <button
+                type="submit"
+                disabled={busy || dishesLoading || dishesError}
+                className="inline-flex h-10 min-w-[76px] items-center justify-center rounded-full bg-[#D8E9AC] px-4 text-xs font-bold tracking-wide text-[#151F00] shadow-[0_4px_20px_rgba(216,233,172,0.18)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {busy ? "..." : "Salva"}
+              </button>
             </header>
 
+            {/* CONTENUTO MODALE */}
             <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 pb-6 sm:p-6">
               <div className="flex flex-col gap-1.5">
                 <label
@@ -636,7 +637,6 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
                 />
               </div>
 
-              {/* Tipologia e fascia oraria affiancate e della stessa altezza */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex min-w-0 flex-col gap-1.5">
                   <label
@@ -795,30 +795,6 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
                 </div>
               </div>
             </div>
-
-            <footer className="sticky bottom-0 z-20 grid shrink-0 grid-cols-2 gap-3 border-t border-white/[0.07] bg-[#081616]/95 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] backdrop-blur-xl">
-              <button
-                type="button"
-                onClick={resetForm}
-                disabled={busy}
-                className={secondaryButton}
-              >
-                Annulla
-              </button>
-              <button
-                type="submit"
-                disabled={busy || dishesLoading || dishesError}
-                className={primaryButton}
-              >
-                {busy ? (
-                  "Salvataggio…"
-                ) : editingId ? (
-                  "Salva Modifiche"
-                ) : (
-                  "Crea Menù"
-                )}
-              </button>
-            </footer>
           </form>
         </div>
       )}
