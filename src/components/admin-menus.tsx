@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -23,14 +24,14 @@ const MENU_TYPES = [
 ] as const;
 
 const MENU_TIMES = [
-  "Tutte le fasce orarie (giorno + sera)",
+  "Tutte le fasce orarie (Giorno + Sera)",
   "Giorno",
   "Sera",
   "Solo domenica a pranzo",
 ] as const;
 
 const input =
-  "w-full min-h-[46px] rounded-xl border border-white/[0.07] bg-[#1F2C2C] px-3.5 text-sm font-medium text-[#D7E5E5] placeholder:text-[#B5CBC9]/60 outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
+  "w-full min-h-[46px] rounded-xl border border-white/[0.07] bg-[#1F2C2C] px-3.5 text-base font-medium text-[#D7E5E5] placeholder:text-[#B5CBC9]/60 outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
 
 const primaryButton =
   "inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full bg-[#D8E9AC] px-5 text-xs font-bold tracking-wide text-[#151F00] shadow-[0_4px_20px_rgba(216,233,172,0.18)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
@@ -52,6 +53,12 @@ const normalizeMenuTime = (value: string) => {
   const legacyValue = value.trim().toLocaleLowerCase("it-IT");
   if (legacyValue === "pranzo") return "Giorno";
   if (legacyValue === "cena") return "Sera";
+  if (
+    legacyValue === "tutte le fasce orarie (giorno + sera)"
+  ) {
+    return MENU_TIMES[0];
+  }
+
   return MENU_TIMES[0];
 };
 
@@ -244,8 +251,6 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
 
     const payload: MenuInsert = {
       name_it: trimmedName,
-      // Il layout approvato prevede un solo nome: in modifica preserviamo
-      // quello inglese già presente, mentre nei nuovi record usiamo il nome IT.
       name_en: existingMenu?.name_en ?? trimmedName,
       description_it: descriptionIt.trim() || null,
       description_en: existingMenu?.description_en ?? null,
@@ -284,13 +289,13 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
         menuId = data.id;
       }
 
-      if (!menuId) throw new Error("ID del menù non disponibile dopo il salvataggio");
+      if (!menuId) {
+        throw new Error("ID del menù non disponibile dopo il salvataggio");
+      }
 
       try {
         await syncMenuDishes(menuId, selectedDishIds, dishes);
       } catch (assignmentError) {
-        // Se un nuovo menù è già stato creato, lo convertiamo in modalità
-        // modifica così il successivo tentativo non crea un duplicato.
         if (!editingId) setEditingId(menuId);
         await refreshMenus();
         throw new Error(
@@ -405,7 +410,6 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
 
   return (
     <section className="flex flex-col gap-4 text-[#D7E5E5]">
-      {/* Intestazione della sezione, allineata al layout Horloge_design */}
       <div className="flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-[#111E1E] p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-display text-lg font-medium text-white">
@@ -440,7 +444,6 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
         </div>
       </div>
 
-      {/* Elenco delle carte */}
       {countsError && (
         <p className="rounded-xl border border-[#FFB4AB]/20 bg-[#111E1E] p-3 text-xs text-[#FFB4AB]">
           Non è stato possibile aggiornare il conteggio dei piatti associati.
@@ -572,7 +575,7 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
         </div>
       )}
 
-      {/* Modale a schermo intero: struttura mobile del design originale */}
+      {/* MODALE NUOVO / MODIFICA MENU */}
       {showForm && (
         <div
           className="fixed inset-0 z-[75] flex h-[100dvh] w-full flex-col overflow-hidden bg-[#081616]"
@@ -623,10 +626,9 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
                 </label>
                 <input
                   id="admin-menu-name"
-                  autoFocus
                   required
                   maxLength={120}
-                  className={cn(input, "text-base")}
+                  className={input}
                   value={nameIt}
                   onChange={(event) => setNameIt(event.target.value)}
                   disabled={busy}
@@ -634,7 +636,8 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {/* Tipologia e fascia oraria affiancate e della stessa dimensione */}
+              <div className="grid grid-cols-2 gap-3">
                 <div className="flex min-w-0 flex-col gap-1.5">
                   <label
                     htmlFor="admin-menu-type"
@@ -645,7 +648,7 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
                   <select
                     id="admin-menu-type"
                     required
-                    className={cn(input, "min-w-0 px-3 text-sm")}
+                    className={cn(input, "min-w-0 px-2")}
                     value={menuType}
                     onChange={(event) => setMenuType(event.target.value)}
                     disabled={busy}
@@ -668,7 +671,7 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
                   <select
                     id="admin-menu-time"
                     required
-                    className={cn(input, "min-w-0 px-3 text-xs")}
+                    className={cn(input, "min-w-0 px-2")}
                     value={menuTime}
                     onChange={(event) => setMenuTime(event.target.value)}
                     disabled={busy}
@@ -692,7 +695,7 @@ function AdminMenus({ onUploadPdf }: AdminMenusProps) {
                 <input
                   id="admin-menu-description"
                   maxLength={300}
-                  className={cn(input, "text-sm")}
+                  className={input}
                   value={descriptionIt}
                   onChange={(event) => setDescriptionIt(event.target.value)}
                   disabled={busy}
