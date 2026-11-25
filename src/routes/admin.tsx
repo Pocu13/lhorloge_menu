@@ -43,6 +43,9 @@ export const Route = createFileRoute("/admin")({
 const input =
   "w-full rounded-xl border border-white/10 bg-[#152222] px-3.5 py-3 text-sm text-[#D7E5E5] placeholder:text-[#999999] outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
 
+const categoryModalInput =
+  "w-full rounded-xl border border-white/10 bg-[#152222] px-3.5 py-3 text-base text-[#D7E5E5] placeholder:text-[#999999] outline-none transition focus:border-[#D8E9AC] focus:ring-1 focus:ring-[#D8E9AC]";
+
 const primaryButton =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#D8E9AC] px-5 text-xs font-bold uppercase tracking-wider text-[#081616] shadow-[0_4px_20px_rgba(216,233,172,0.18)] transition active:scale-[0.98] disabled:opacity-50";
 
@@ -998,10 +1001,9 @@ function Editor() {
                     Nome Categoria (IT) *
                   </label>
                   <input
-                    autoFocus
                     required
                     maxLength={80}
-                    className={input}
+                    className={categoryModalInput}
                     placeholder="Es. Antipasti & Tapas"
                     value={categoryDraft.name_it}
                     onChange={(e) =>
@@ -1020,7 +1022,7 @@ function Editor() {
                   <input
                     required
                     maxLength={80}
-                    className={input}
+                    className={categoryModalInput}
                     placeholder="E.g. Starters & Tapas"
                     value={categoryDraft.name_en}
                     onChange={(e) =>
@@ -1039,7 +1041,7 @@ function Editor() {
                   <textarea
                     rows={3}
                     maxLength={300}
-                    className={`${input} resize-y`}
+                    className={`${categoryModalInput} resize-y`}
                     placeholder="Breve descrizione della categoria..."
                     value={categoryDraft.description_it}
                     onChange={(e) =>
@@ -1058,7 +1060,7 @@ function Editor() {
                   <textarea
                     rows={3}
                     maxLength={300}
-                    className={`${input} resize-y`}
+                    className={`${categoryModalInput} resize-y`}
                     placeholder="Short description of the category..."
                     value={categoryDraft.description_en}
                     onChange={(e) =>
